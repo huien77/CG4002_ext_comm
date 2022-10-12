@@ -25,13 +25,13 @@ class GameEngine(threading.Thread):
 ##                self.p1.bulletDamage()
 ##        
         elif action == Actions.shield:
-            self.p1.shield
+            self.p1.shield()
 ##        elif action == Actions.shield:
 ##            self.p2.shield
 ##        
         elif action == Actions.grenade:
-            self.p1.grenade
-            if json["p1"]["grenade_hit"]:
+            self.p1.grenade()
+            if self.player_state["p1"]["grenade_hit"]:
                 self.p2.grenadeDamage()
 ##        elif p2_action == Actions.grenade:
 ##            self.p2.grenade
