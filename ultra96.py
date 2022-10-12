@@ -143,10 +143,9 @@ class AIDetector(threading.Thread):
             while len(IMU_buffer):
                 data = read_data(IMU_buffer, state_lock)
                 action = self.predict_action(data["V"])
-
-                print("Predicted:", action, "Prev_detect:", last_detected)
                 
                 if (action != "idle"):
+                    print("Predicted:\t", action, "\t\tPrev_detect:", last_detected)
                     last_detected = action
                     input_data(AI_buffer, state_lock, action)
 
@@ -187,7 +186,7 @@ class AIDetector(threading.Thread):
             state = read_state()
 
             if (state["p1"]["shield_time"] > 0):
-                time.sleep(1)
+                time.sleep(0.8)
                 state["p1"]["shield_time"] -= 1
                 if state["p1"]["shield_time"] == 0:
                     state["p1"]["shield_health"] = 0
@@ -373,7 +372,3 @@ if __name__ == "__main__":
     
     #mqtt_p.terminate()
     #mqtt_r.terminate()
-            
-        
-
-
