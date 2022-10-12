@@ -21,7 +21,7 @@ class GameEngine(threading.Thread):
 ##        elif action == Actions.shoot:
 ##            self.p1.shoot()
 ##
-            if self.p2['p2']['bullet_hit']=="yes":
+            if self.player_state['p2']['bullet_hit']=="yes":
                 self.p1.bulletDamage()
 ##        
         elif action == Actions.shield:
