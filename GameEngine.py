@@ -31,15 +31,16 @@ class GameEngine(threading.Thread):
 ##        
         elif action == Actions.grenade:
             self.p1.grenade()
-            if self.player_state["p1"]["grenade_hit"]:
-                self.p2.grenadeDamage()
 ##        elif p2_action == Actions.grenade:
 ##            self.p2.grenade
 ##            if json["p2"]["grenade_hit"]:
 ##                self.p1.grenadeDamage()
 
+        elif action == Actions.grenade1:
+            self.p2.grenadeDamage()
+
         if self.p1.shield_time > 0:
             time.sleep(1)
-            self.shield_time -= 1
+            self.p1.shield_time -= 1
 
         return self.player_state

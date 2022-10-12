@@ -126,6 +126,10 @@ class AIDetector(threading.Thread):
         # start game engine
         game_engine = GameEngine(PLAYER_STATE_VIS)
         game_engine.start()
+
+        # sending to vis
+        mqtt_p = MQTTClient('visualizer17', 'publish')
+        mqtt_p.client.loop_start()
         
         while action != "logout":
             while len(IMU_buffer):
@@ -156,9 +160,8 @@ class AIDetector(threading.Thread):
                 #print("[Game engine] Resulting state: ", state)
                 state = read_state()
 
-                if action != "grenade":
-                    input_data(eval_buffer, state_lock, state)
-                    #print("[Game engine] Sent to eval: ", state)
+                input_data(eval_buffer, state_lock, state)
+                #print("[Game engine] Sent to eval: ", state)
 
                 input_data(vis_send_buffer, state_lock, state)
                 #print("[Game engine] Sent to visualiser:", state)
@@ -167,14 +170,17 @@ class AIDetector(threading.Thread):
                 # Visualizer sends player that is hit by grenade
                 player_hit = read_data(vis_recv_buffer, state_lock)
                 #print("[Game engine] Received from visualiser:", player_hit)
-                state = read_state()
-                if player_hit != "none":
-                    # minus health based on grenade hit
-                    state[player_hit]["hp"] -= 20
+                temp = game_engine.performAction('yes1')
+                input_state(temp)
 
-                input_state(state)
                 input_data(eval_buffer, state_lock, state)
+                input_data(vis_send_buffer, state_lock, state)
+                print("eval buffer: ", eval_buffer)
+                print("send vis: ", vis_send_buffer)
+
                 #print("[Game engine] Sent to curr state and eval:", state)
+
+            mqtt_p.publish()
 
 # for visualizer
 class MQTTClient(threading.Thread):
@@ -346,10 +352,6 @@ if __name__ == "__main__":
     # start thread for receiving from laptop
     u_server = Server(int(port_server))
     u_server.start()
-
-    # sending to vis
-    mqtt_p = MQTTClient('visualizer17', 'publish')
-    mqtt_p.client.loop_start()
 
     # receiving from vis
     mqtt_r = MQTTClient('grenade17', 'receive')
