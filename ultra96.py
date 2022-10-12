@@ -167,12 +167,14 @@ class AIDetector(threading.Thread):
 
                     input_data(vis_send_buffer, state_lock, state)
                     #print("[Game engine] Sent to visualiser:", state)
+                    mqtt_p.publish()
 
                     temp['p1']['action'] = ''
                     input_state(temp)
                     state = read_state()
                     input_data(eval_buffer, state_lock, state)
                     input_data(vis_send_buffer, state_lock, state)
+                    mqtt_p.publish()
 
 
             if len(vis_recv_buffer):
@@ -184,6 +186,7 @@ class AIDetector(threading.Thread):
                 state = read_state()
                 input_data(eval_buffer, state_lock, state)
                 input_data(vis_send_buffer, state_lock, state)
+                mqtt_p.publish()
 
                 #print("[Game engine] Sent to curr state and eval:", state)
 
@@ -194,14 +197,14 @@ class AIDetector(threading.Thread):
                 state = read_state()
                 input_data(eval_buffer, state_lock, state)
                 input_data(vis_send_buffer, state_lock, state)
+                mqtt_p.publish()
 
                 temp['p1']['action'] = ''
                 input_state(temp)
                 state = read_state()
                 input_data(eval_buffer, state_lock, state)
                 input_data(vis_send_buffer, state_lock, state)
-
-            mqtt_p.publish()
+                mqtt_p.publish()
 
 # for visualizer
 class MQTTClient(threading.Thread):
