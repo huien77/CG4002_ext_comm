@@ -20,7 +20,6 @@ class Player:
             if self.fullstate[enemy.player]['bullet_hit']=="yes":
                 enemy.bulletDamage()
                 # NOTE for now Self too for them resets
-                self.bulletDamage()
 
         else:
             self.action = ''
