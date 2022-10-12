@@ -319,7 +319,7 @@ class Server(threading.Thread):
 
                     j += 1
                 
-                print(IMU_buffer)
+                # print(IMU_buffer)
 
             except Exception as _:
                 traceback.print_exc()
