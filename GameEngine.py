@@ -7,8 +7,8 @@ from PlayerState import Player
 class GameEngine(threading.Thread):
     def __init__(self, player_state):
         super().__init__()
-        self.p1 = Player(player_state, 'p1')
-        self.p2 = Player(player_state, 'p2')
+        self.p1 = Player(player_state['p1'])
+        self.p2 = Player(player_state['p2'])
         self.player_state = player_state
         self.player_state['p1'] = self.p1.__dict__
         self.player_state['p2'] = self.p2.__dict__
@@ -17,17 +17,15 @@ class GameEngine(threading.Thread):
         print('[Game Engine] Received action: ', action)
 
         if action == Actions.shoot:
-            hit = self.p1.shoot('p2')
-            if hit: self.p2.bulletDamage()
-            self.p1.bulletDamage()
+            self.p1.shoot()
 ##        elif action == Actions.shoot:
 ##            self.p1.shoot()
 # ##
-#             if self.player_state['p2']['bullet_hit']=="yes":
-#                 self.p2.bulletDamage()
+            if self.player_state['p2']['bullet_hit']=="yes":
+                self.p2.bulletDamage()
 
-#                 ### NOTE Allows for RESET.. REMOVE LATERS!!!!
-#                 self.p1.bulletDamage()
+                ### NOTE Allows for RESET.. REMOVE LATERS!!!!
+                self.p1.bulletDamage()
 ##        
         elif action == Actions.shield:
             self.p1.shield()

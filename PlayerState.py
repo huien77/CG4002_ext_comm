@@ -1,26 +1,19 @@
 class Player:
-    def __init__(self, state, player):
-        self.fullstate = state
-        selfstate = state[player]
-        self.player = player
-        self.hp = selfstate['hp']
-        self.action = selfstate['action']
-        self.bullets = selfstate['bullets']
-        self.grenades = selfstate['grenades']
-        self.shield_time = selfstate['shield_time']
-        self.shield_health = selfstate['shield_health']
-        self.num_shield = selfstate['num_shield']
-        self.num_deaths = selfstate['num_deaths']
-        self.bullet_hit = selfstate['bullet_hit']
-            
-    def shoot(self,enemy):
+    def __init__(self, state):
+        self.hp = state['hp']
+        self.action = state['action']
+        self.bullets = state['bullets']
+        self.grenades = state['grenades']
+        self.shield_time = state['shield_time']
+        self.shield_health = state['shield_health']
+        self.num_shield = state['num_shield']
+        self.num_deaths = state['num_deaths']
+        self.bullet_hit = state['bullet_hit']
+
+    def shoot(self):
         if self.bullets > 0:
             self.action = "shoot"
             self.bullets -= 1
-            if self.fullstate[enemy]['bullet_hit']=="yes":
-                return True
-            else: return False
-
         else:
             self.action = ''
 
