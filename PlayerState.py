@@ -18,7 +18,8 @@ class Player:
             self.action = "shoot"
             self.bullets -= 1
             if self.fullstate[enemy.player]['bullet_hit']=="yes":
-                enemy.bulletDamage()
+                return True
+            else: return False
                 # NOTE for now Self too for them resets
 
         else:
