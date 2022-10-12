@@ -153,6 +153,7 @@ class AIDetector(threading.Thread):
                     input_state(temp)
                 
                 #print("[Game engine] Resulting state: ", state)
+                state = read_state()
 
                 if action != "grenade":
                     input_data(eval_buffer, state_lock, state)
