@@ -11,19 +11,23 @@ class Player:
         self.bullet_hit = state['bullet_hit']
 
     def shoot(self):
-        self.action = "shoot"
         if self.bullets > 0:
+            self.action = "shoot"
             self.bullets -= 1
+        else:
+            self.action = ''
 
     def grenade(self):
-        self.action = "grenade"
         if self.grenades > 0:
+            self.action = "grenade"
             self.grenades -= 1
+        else:
+            self.action = ''
+
     
     def shield(self):
-        self.action = "shield"
-        
         if self.num_shield > 0:
+            self.action = "shield"
             self.shield_health = 30
             self.num_shield -= 1
             self.shield_time = 10
