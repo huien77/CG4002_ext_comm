@@ -9,8 +9,9 @@ class GameEngine(threading.Thread):
         super().__init__()
         self.p1 = Player(player_state['p1'])
         self.p2 = Player(player_state['p2'])
-        player_state['p1'] = self.p1.__dict__
-        player_state['p2'] = self.p2.__dict__
+        self.player_state = player_state
+        self.player_state['p1'] = self.p1.__dict__
+        self.player_state['p2'] = self.p2.__dict__
 
     def performAction(self, action):
         print('[Game Engine] Received action: ', action)
