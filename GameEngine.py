@@ -6,6 +6,7 @@ from PlayerState import Player
 
 class GameEngine(threading.Thread):
     def __init__(self, player_state):
+        super().__init__()
         self.p1 = Player(player_state['p1'])
         self.p2 = Player(player_state['p2'])
         player_state['p1'] = self.p1.__dict__
