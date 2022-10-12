@@ -109,6 +109,11 @@ def input_data(buffer, lock, data):
     buffer.append(data)
     lock.release()
 
+def state_publish(mqtt_p, state=read_state(), eval=True, vis=True):
+    if eval: input_data(eval_buffer, state_lock, state)
+    if vis: input_data(vis_send_buffer, state_lock, state)
+    mqtt_p.publish()
+
 # for AI
 class AIDetector(threading.Thread):
     def __init__(self):
@@ -122,6 +127,7 @@ class AIDetector(threading.Thread):
         return actions[r]
 
     def run(self):
+        # DEBUGGING
         action = ""
         last_detected = ""
         
@@ -136,19 +142,13 @@ class AIDetector(threading.Thread):
         while action != "logout":
             while len(IMU_buffer):
                 data = read_data(IMU_buffer, state_lock)
-                # print("pass into AI: ", data["V"])
                 action = self.predict_action(data["V"])
 
-                print("predicted action: ", action)
+                print("Predicted:", action, "Prev_detect:", last_detected)
                 
                 if (action != "idle"):
                     last_detected = action
-
-                    print("[AI] Last detected: ", last_detected)
-                    # print("[AI] Received data: ", data["V"])
-
                     input_data(AI_buffer, state_lock, action)
-                    #print("AI buffer: ", AI_buffer)
 
             if len(AI_buffer):
                 action = read_data(AI_buffer, state_lock)
@@ -158,24 +158,11 @@ class AIDetector(threading.Thread):
                 if (action != "idle"):
                     temp = game_engine.performAction(action)
                     input_state(temp)
-                
-                    #print("[Game engine] Resulting state: ", state)
-                    state = read_state()
-
-                    input_data(eval_buffer, state_lock, state)
-                    #print("[Game engine] Sent to eval: ", state)
-
-                    input_data(vis_send_buffer, state_lock, state)
-                    #print("[Game engine] Sent to visualiser:", state)
-                    mqtt_p.publish()
+                    state_publish(mqtt_p)
 
                     temp['p1']['action'] = ''
                     input_state(temp)
-                    state = read_state()
-                    input_data(eval_buffer, state_lock, state)
-                    input_data(vis_send_buffer, state_lock, state)
-                    mqtt_p.publish()
-
+                    state_publish(mqtt_p)
 
             if len(vis_recv_buffer):
                 # Visualizer sends player that is hit by grenade
@@ -183,10 +170,7 @@ class AIDetector(threading.Thread):
                 #print("[Game engine] Received from visualiser:", player_hit)
                 temp = game_engine.performAction('yes1')
                 input_state(temp)
-                state = read_state()
-                input_data(eval_buffer, state_lock, state)
-                input_data(vis_send_buffer, state_lock, state)
-                mqtt_p.publish()
+                state_publish(mqtt_p)
 
                 #print("[Game engine] Sent to curr state and eval:", state)
 
@@ -194,39 +178,22 @@ class AIDetector(threading.Thread):
                 read_data(GUN_buffer, state_lock)
                 temp = game_engine.performAction('shoot')
                 input_state(temp)
-                state = read_state()
-                input_data(eval_buffer, state_lock, state)
-                input_data(vis_send_buffer, state_lock, state)
-                mqtt_p.publish()
+                state_publish(mqtt_p)
 
                 temp['p1']['action'] = ''
                 input_state(temp)
-                state = read_state()
-                input_data(eval_buffer, state_lock, state)
-                input_data(vis_send_buffer, state_lock, state)
-                mqtt_p.publish()
+                state_publish(mqtt_p)
 
             state = read_state()
 
             if (state["p1"]["shield_time"] > 0):
                 time.sleep(1)
                 state["p1"]["shield_time"] -= 1
-
                 if state["p1"]["shield_time"] == 0:
                     state["p1"]["shield_health"] = 0
-                    
+
                 input_state(state)
-                input_data(eval_buffer, state_lock, state)
-                input_data(vis_send_buffer, state_lock, state)
-                mqtt_p.publish()
-
-                # if (state["p1"]["shield_time"] == 0):
-                #     state['p1']['shield_health'] = 0
-                #     input_state(state)
-                #     input_data(eval_buffer, state_lock, state)
-                #     input_data(vis_send_buffer, state_lock, state)
-                #     mqtt_p.publish()
-
+                state_publish(mqtt_p, state)
 
 # for visualizer
 class MQTTClient(threading.Thread):
@@ -293,7 +260,7 @@ class Client(threading.Thread):
         m = str(length) + "_"
         self.socket.sendall(m.encode("utf-8"))
         self.socket.sendall(encrypted_text)
-        print("[Evaluation Client] Sent data")
+        # print("[Evaluation Client] Sent data")
 
     # receive from eval server
     def receive(self):
@@ -370,8 +337,6 @@ class Server(threading.Thread):
 
                     j += 1
                 
-                # print(IMU_buffer)
-
             except Exception as _:
                 traceback.print_exc()
                 self.stop()
