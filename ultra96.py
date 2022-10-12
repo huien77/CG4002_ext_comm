@@ -189,7 +189,7 @@ class AIDetector(threading.Thread):
 
             if len(GUN_buffer):
                 read_data(GUN_buffer, state_lock)
-                temp = game_engine.performAction("gun1")
+                temp = game_engine.performAction('shoot')
                 input_state(temp)
                 state = read_state()
                 input_data(eval_buffer, state_lock, state)

@@ -39,9 +39,6 @@ class GameEngine(threading.Thread):
         elif action == Actions.grenade1:
             self.p2.grenadeDamage()
 
-        elif action == Actions.gun1:
-            self.p1.shoot()
-
         if self.p1.shield_time > 0:
             time.sleep(1)
             self.p1.shield_time -= 1
