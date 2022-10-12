@@ -5,15 +5,19 @@ import base64
 import sys
 import time
 import json
+import traceback
 import paho.mqtt.client as mqtt
-import random
+from os import getcwd, path
+from pathlib import Path
+from sys import path as sp
 
-##from start_detector import Detector
-from GameEngine import GameEnginer
+sp.append(path.join((Path.cwd()).parent,"jupyter_notebooks","capstoneml","scripts"))
+from start_detector import Detector
+from GameEngine import GameEngine
 
 from Crypto.Cipher import AES
-from Crypto.Random import get_random_bytes
 from Crypto.Util.Padding import pad, unpad
+from Crypto.Random import get_random_bytes
 
 PLAYER_STATE = {
     "p1": {
@@ -41,26 +45,24 @@ PLAYER_STATE = {
 PLAYER_STATE_VIS = {
     "p1": {
         "hp": 100,
-        "action": None,
+        "action": '',
         "bullets": 6,
         "bullet_hit": "no", 
         "grenades": 2,
         "shield_time": 0,
         "shield_health": 0,
         "num_shield": 3,
-        "shield_broke": "no",
         "num_deaths": 0
         },
     "p2": {
         "hp": 100,
-        "action": None,
+        "action": '',
         "bullets": 6,
         "bullet_hit": "no",
         "grenades": 2,
         "shield_time": 0,
         "shield_health": 0,
         "num_shield": 3,
-        "shield_broke": "no",
         "num_deaths": 0
         }
 }
@@ -72,7 +74,9 @@ curr_state_vis = PLAYER_STATE_VIS
 # AI buffer
 AI_buffer = []
 # internal comm buffer
-internal_buffer = []
+IMU_buffer = []
+GUN_buffer = []
+Shield_buffer = []
 # eval server buffer
 eval_buffer = []
 # send to visualizer buffer
@@ -107,26 +111,68 @@ def input_data(buffer, lock, data):
 class AIDetector(threading.Thread):
     def __init__(self):
         super().__init__()
+        self.detector = Detector()
 
     def predict_action(self, data):
-        actions = ["grenade", "reload", "shoot", "shield"]
-        r = random.randint(0,3)
+        actions = ["logout", "grenade", "idle", "reload", "shield"]
+        r = self.detector.eval_data(data, 0)
 
         return actions[r]
 
     def run(self):
         action = ""
+        last_detected = ""
+        
+        # start game engine
+        game_engine = GameEngine(PLAYER_STATE_VIS)
+        game_engine.start()
         
         while action != "logout":
-            if len(internal_buffer):
-                data = read_data(internal_buffer, state_lock)
-                print("[AI] Received data: ", data)
-
-                action = self.predict_action(data)
-                print("[AI] Generated action: ", action)
+            if len(IMU_buffer):
+                data = read_data(IMU_buffer, state_lock)
+                action = self.predict_action(data["V"])
+                
+                if (action != "idle"):
+                    last_detected = action
+                
+                print("[AI] Last detected: ", last_detected)
+                print("[AI] Received data: ", data["V"])
 
                 input_data(AI_buffer, state_lock, action)
                 print("AI buffer: ", AI_buffer)
+
+            if len(AI_buffer):
+                action = read_data(AI_buffer, state_lock)
+
+                temp = None
+
+                if (action != "idle"):
+                    temp = game_engine.performAction(action)
+                    input_state(temp)
+                
+                print("[Game engine] Resulting state: ", state)
+
+                if action != "grenade":
+                    input_data(eval_buffer, state_lock, state)
+                    print("[Game engine] Sent to eval: ", state)
+
+                input_data(vis_send_buffer, state_lock, state)
+                print("[Game engine] Sent to visualiser:", state)
+
+            if len(vis_recv_buffer):
+                # Visualizer sends player that is hit by grenade
+                player_hit = read_data(vis_recv_buffer, state_lock)
+                print("[Game engine] Received from visualiser:", player_hit)
+                state = read_state()
+                if player_hit != "none":
+                    # minus health based on grenade hit
+                    state[player_hit]["hp"] -= 20
+
+                input_state(state)
+                input_data(eval_buffer, state_lock, state)
+                print("[Game engine] Sent to curr state and eval:", state)
+
+            time.sleep(0.5)
 
 # for visualizer
 class MQTTClient(threading.Thread):
@@ -172,7 +218,7 @@ class Client(threading.Thread):
         # start connection
         self.socket.connect(self.server_address)
         
-        print("[Evaluation Client] Connected: ", self,server_address)
+        print("[Evaluation Client] Connected: ", self.server_address)
 
     def encrypt_message(self, message):
         # convert to a json string
@@ -250,12 +296,28 @@ class Server(threading.Thread):
         while True:
             try:
                 data = self.connection.recv(1024)
+                data = data.decode('utf8')
                 print("[Ultra96 Server] Received from laptop: ", data)
 
-                if data:
-                    input_data(internal_buffer, state_lock, data)
-                    print('Internal buffer: ', internal_buffer)
-                    time.sleep(0.5)
+                i = 0
+                j = 0
+
+                while j < len(data):
+                    if data[j] == '}':
+                        json_data = json.loads(data[i:j+1])
+
+                        if json_data["D"] == "IMU":
+                            input_data(IMU_buffer, state_lock, json_data)
+                        elif json_data["D"] == "GUN":
+                            input_data(GUN_buffer, state_lock, json_data)
+                        else:
+                            input_data(Shield_buffer, state_lock, json_data)
+                        
+                        i = j + 1
+
+                    j += 1
+                
+                print(IMU_buffer)
 
             except Exception as _:
                 traceback.print_exc()
@@ -295,46 +357,8 @@ if __name__ == "__main__":
     # start ultra96 client to eval server thread
     my_client = Client(ip_addr, port_num, group_id, secret_key)
     
-    action = ''
-
-    while action != 'logout':
-        if len(AI_buffer):
-            action = read_data(AI_buffer, state_lock)
-
-            print("[Game engine] Received action:", action)
-
-            state = read_state()
-
-            state["p1"]["action"] = action
-
-            input_state(state)
-            
-            print("[Game engine] Resulting state:", state)
-
-            if action != "grenade":
-                input_data(eval_buffer, eval_lock, state)
-                print("[Game engine] Sent to eval:", state)
-
-            input_data(viz_send_buffer, viz_send_lock, state)
-            print("[Game engine] Sent to visualiser:", state)
-
-        if len(vis_recv_buffer):
-            # Visualizer sends player that is hit by grenade
-            player_hit = read_data(viz_recv_buffer, viz_recv_lock)
-            print("[Game engine] Received from visualiser:", player_hit)
-            state = read_state()
-            if player_hit != "none":
-                # minus health based on grenade hit
-                state[player_hit]["hp"] -= 20
-
-            input_state(state)
-            input_data(eval_buffer, eval_lock, state)
-            print("[Game engine] Sent to curr state and eval:", state)
-
-        time.sleep(0.5)
-
-    pub_client.terminate()
-    recv_client.terminate()
+    #mqtt_p.terminate()
+    #mqtt_r.terminate()
             
         
 

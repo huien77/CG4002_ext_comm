@@ -1,17 +1,19 @@
 import json
 import threading
+import time
 from Actions import Actions
+from PlayerState import Player
 
 class GameEngine(threading.Thread):
-    def __init__(self, player_state, action1, grenade1, bullet1):
+    def __init__(self, player_state):
         self.p1 = Player(player_state['p1'])
         self.p2 = Player(player_state['p2'])
-        self.action1 = action1
-        self.bullet1 = bullet1
-        self.grenade1 = grenade1
-        print('[Game Engine] Received from AI and relay node')
+        player_state['p1'] = self.p1.__dict__
+        player_state['p2'] = self.p2.__dict__
 
-    def performAction(self, action, grenade, bullet):    
+    def performAction(self, action):
+        print('[Game Engine] Received action: ', action)
+
         if action == Actions.shoot:
             self.p1.shoot()
 ##        elif action == Actions.shoot:
@@ -33,18 +35,9 @@ class GameEngine(threading.Thread):
 ##            self.p2.grenade
 ##            if json["p2"]["grenade_hit"]:
 ##                self.p1.grenadeDamage()
-##        
-        elif p1_action == Actions.logout:
-            self.data["p1"]["action"] = "logout"
-            self.data["p2"]["action"] = "logout"
-    
-    
-    def write_to_Json(self):
-        return json.dumps(self.data)
 
-    def run(self):
-        while len(self.action):
-            performAction(self.action)
-            self.action = ''
-            
-        
+        if self.p1.shield_time > 0:
+            time.sleep(1)
+            self.shield_time -= 1
+
+        return self.player_state

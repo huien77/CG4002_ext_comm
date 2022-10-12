@@ -8,7 +8,7 @@ class Player:
         self.shield_health = state['shield_health']
         self.num_shield = state['num_shield']
         self.num_deaths = state['num_deaths']
-        self.shield_is_active = False
+        self.bullet_hit = state['bullet_hit']
 
     def shoot(self):
         self.action = "shoot"
@@ -22,15 +22,10 @@ class Player:
     
     def shield(self):
         self.action = "shield"
-        if self.num_shield > 0 and not self.shield_is_active:
-            self.shield_is_active = True
+        if self.num_shield > 0:
             self.shield_health = 30
             self.num_shield -= 1
             self.shield_time = 10
-            while shield_time > 0:
-                time.sleep(1)
-                self.shield_time -= 1
-            self.shield_is_active = False
     
     def reload(self):
         self.action = "reload"
