@@ -158,24 +158,21 @@ class AIDetector(threading.Thread):
                 if (action != "idle"):
                     temp = game_engine.performAction(action)
                     input_state(temp)
-                else:
-                    temp["p1"]["action"] = ''
-                    input_state(temp)
                 
-                #print("[Game engine] Resulting state: ", state)
-                state = read_state()
+                    #print("[Game engine] Resulting state: ", state)
+                    state = read_state()
 
-                input_data(eval_buffer, state_lock, state)
-                #print("[Game engine] Sent to eval: ", state)
+                    input_data(eval_buffer, state_lock, state)
+                    #print("[Game engine] Sent to eval: ", state)
 
-                input_data(vis_send_buffer, state_lock, state)
-                #print("[Game engine] Sent to visualiser:", state)
+                    input_data(vis_send_buffer, state_lock, state)
+                    #print("[Game engine] Sent to visualiser:", state)
 
-                temp['p1']['action'] = ''
-                input_state(temp)
-                state = read_state()
-                input_data(eval_buffer, state_lock, state)
-                input_data(vis_send_buffer, state_lock, state)
+                    temp['p1']['action'] = ''
+                    input_state(temp)
+                    state = read_state()
+                    input_data(eval_buffer, state_lock, state)
+                    input_data(vis_send_buffer, state_lock, state)
 
 
             if len(vis_recv_buffer):
