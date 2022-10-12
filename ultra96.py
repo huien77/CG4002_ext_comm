@@ -181,13 +181,17 @@ class AIDetector(threading.Thread):
                 #print("[Game engine] Received from visualiser:", player_hit)
                 temp = game_engine.performAction('yes1')
                 input_state(temp)
-
+                state = read_state()
                 input_data(eval_buffer, state_lock, state)
                 input_data(vis_send_buffer, state_lock, state)
-                print("eval buffer: ", eval_buffer)
-                print("send vis: ", vis_send_buffer)
 
                 #print("[Game engine] Sent to curr state and eval:", state)
+
+            if len(GUN_buffer):
+                temp = game_engine.performAction("gun1")
+                input_state(temp)
+                input_data(eval_buffer, state_lock, state)
+                input_data(vis_send_buffer, state_lock, state)
 
             mqtt_p.publish()
 
