@@ -128,7 +128,7 @@ class AIDetector(threading.Thread):
         game_engine.start()
         
         while action != "logout":
-            if len(IMU_buffer):
+            while len(IMU_buffer):
                 data = read_data(IMU_buffer, state_lock)
                 print("pass into AI: ", data["V"])
                 action = self.predict_action(data["V"])
@@ -175,8 +175,6 @@ class AIDetector(threading.Thread):
                 input_state(state)
                 input_data(eval_buffer, state_lock, state)
                 #print("[Game engine] Sent to curr state and eval:", state)
-
-            time.sleep(0.5)
 
 # for visualizer
 class MQTTClient(threading.Thread):
