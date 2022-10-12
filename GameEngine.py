@@ -25,7 +25,6 @@ class GameEngine(threading.Thread):
                 self.p2.bulletDamage()
 
                 ### NOTE Allows for RESET.. REMOVE LATERS!!!!
-                self.p1.bulletDamage()
 ##        
         elif action == Actions.shield:
             self.p1.shield()
