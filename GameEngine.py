@@ -17,7 +17,9 @@ class GameEngine(threading.Thread):
         print('[Game Engine] Received action: ', action)
 
         if action == Actions.shoot:
-            self.p1.shoot(self.p2)
+            hit = self.p1.shoot('p2')
+            if hit: self.p2.bulletDamage()
+            self.p1.bulletDamage()
 ##        elif action == Actions.shoot:
 ##            self.p1.shoot()
 # ##
