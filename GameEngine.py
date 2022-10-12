@@ -21,8 +21,8 @@ class GameEngine(threading.Thread):
 ##        elif action == Actions.shoot:
 ##            self.p1.shoot()
 ##
-##            if json["p2"]["bullet_hit"]:
-##                self.p1.bulletDamage()
+            if self.p2['p2']['bullet_hit']=="yes":
+                self.p1.bulletDamage()
 ##        
         elif action == Actions.shield:
             self.p1.shield()

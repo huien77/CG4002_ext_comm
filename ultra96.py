@@ -176,19 +176,24 @@ class AIDetector(threading.Thread):
                 #print("[Game engine] Sent to curr state and eval:", state)
 
             if len(GUN_buffer):
+                if len(Shield_buffer):
+                    read_data(Shield_buffer, state_lock)
+                    temp = read_state()
+                    temp["p2"]["bullet_hit"] = "yes"
                 read_data(GUN_buffer, state_lock)
                 temp = game_engine.performAction('shoot')
                 input_state(temp)
                 state_publish(mqtt_p)
 
                 temp['p1']['action'] = ''
+                temp['p2']['bullet_hit']="no"
                 input_state(temp)
                 state_publish(mqtt_p)
 
             state = read_state()
 
             if (state["p1"]["shield_time"] > 0):
-                time.sleep(0.75)
+                time.sleep(0.66)
                 state["p1"]["shield_time"] -= 1
                 if state["p1"]["shield_time"] == 0:
                     state["p1"]["shield_health"] = 0
