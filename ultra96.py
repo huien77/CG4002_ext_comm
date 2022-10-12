@@ -139,6 +139,7 @@ class AIDetector(threading.Thread):
         # sending to vis
         mqtt_p = MQTTClient('visualizer17', 'publish')
         mqtt_p.client.loop_start()
+        state_publish(mqtt_p)
         
         while action != "logout":
             while len(IMU_buffer):
@@ -203,7 +204,6 @@ class MQTTClient(threading.Thread):
         self.client = mqtt.Client(client_name)
         self.client.connect('test.mosquitto.org')
         self.client.subscribe(self.topic)
-        self.publish() #### NEEEEEEEWWWWWW
 
     # publish message to topic
     def publish(self):
