@@ -130,6 +130,7 @@ class AIDetector(threading.Thread):
         while action != "logout":
             if len(IMU_buffer):
                 data = read_data(IMU_buffer, state_lock)
+                print("pass into AI: ", data["V"])
                 action = self.predict_action(data["V"])
 
                 print("predicted action: ", action)
@@ -320,7 +321,7 @@ class Server(threading.Thread):
 
                     j += 1
                 
-                print(IMU_buffer)
+                # print(IMU_buffer)
 
             except Exception as _:
                 traceback.print_exc()
