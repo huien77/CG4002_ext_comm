@@ -190,6 +190,7 @@ class AIDetector(threading.Thread):
             if len(GUN_buffer):
                 temp = game_engine.performAction("gun1")
                 input_state(temp)
+                state = read_state()
                 input_data(eval_buffer, state_lock, state)
                 input_data(vis_send_buffer, state_lock, state)
 
