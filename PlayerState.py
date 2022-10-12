@@ -22,6 +22,7 @@ class Player:
     
     def shield(self):
         self.action = "shield"
+        
         if self.num_shield > 0:
             self.shield_health = 30
             self.num_shield -= 1
