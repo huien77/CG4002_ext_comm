@@ -203,7 +203,7 @@ class MQTTClient(threading.Thread):
         self.client = mqtt.Client(client_name)
         self.client.connect('test.mosquitto.org')
         self.client.subscribe(self.topic)
-        self.publish(PLAYER_STATE_VIS) #### NEEEEEEEWWWWWW
+        self.publish() #### NEEEEEEEWWWWWW
 
     # publish message to topic
     def publish(self):
