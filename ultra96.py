@@ -144,11 +144,11 @@ class AIDetector(threading.Thread):
                 if (action != "idle"):
                     last_detected = action
 
-                print("[AI] Last detected: ", last_detected)
-                # print("[AI] Received data: ", data["V"])
+                    print("[AI] Last detected: ", last_detected)
+                    # print("[AI] Received data: ", data["V"])
 
-                input_data(AI_buffer, state_lock, action)
-                #print("AI buffer: ", AI_buffer)
+                    input_data(AI_buffer, state_lock, action)
+                    #print("AI buffer: ", AI_buffer)
 
             if len(AI_buffer):
                 action = read_data(AI_buffer, state_lock)
@@ -177,7 +177,7 @@ class AIDetector(threading.Thread):
 
             if len(vis_recv_buffer):
                 # Visualizer sends player that is hit by grenade
-                player_hit = read_data(vis_recv_buffer, state_lock)
+                read_data(vis_recv_buffer, state_lock)
                 #print("[Game engine] Received from visualiser:", player_hit)
                 temp = game_engine.performAction('yes1')
                 input_state(temp)
@@ -190,6 +190,12 @@ class AIDetector(threading.Thread):
             if len(GUN_buffer):
                 read_data(GUN_buffer, state_lock)
                 temp = game_engine.performAction('shoot')
+                input_state(temp)
+                state = read_state()
+                input_data(eval_buffer, state_lock, state)
+                input_data(vis_send_buffer, state_lock, state)
+
+                temp['p1']['action'] = ''
                 input_state(temp)
                 state = read_state()
                 input_data(eval_buffer, state_lock, state)
