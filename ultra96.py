@@ -109,9 +109,10 @@ def input_data(buffer, lock, data):
     buffer.append(data)
     lock.release()
 
-def state_publish(mqtt_p, state=read_state(), eval=True, vis=True):
-    if eval: input_data(eval_buffer, state_lock, state)
-    if vis: input_data(vis_send_buffer, state_lock, state)
+def state_publish(mqtt_p):
+    state=read_state()
+    input_data(eval_buffer, state_lock, state)
+    input_data(vis_send_buffer, state_lock, state)
     mqtt_p.publish()
 
 # for AI
@@ -186,13 +187,13 @@ class AIDetector(threading.Thread):
             state = read_state()
 
             if (state["p1"]["shield_time"] > 0):
-                time.sleep(0.8)
+                time.sleep(0.75)
                 state["p1"]["shield_time"] -= 1
                 if state["p1"]["shield_time"] == 0:
                     state["p1"]["shield_health"] = 0
 
                 input_state(state)
-                state_publish(mqtt_p, state)
+                state_publish(mqtt_p)
 
 # for visualizer
 class MQTTClient(threading.Thread):
