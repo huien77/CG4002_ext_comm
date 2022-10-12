@@ -1,3 +1,4 @@
+from re import M
 import socket
 import threading
 import time
@@ -193,12 +194,11 @@ class MQTTClient(threading.Thread):
 
     # publish message to topic
     def publish(self):
-        while True:
-            if len(vis_send_buffer):
-                state = read_data(vis_send_buffer, threading.Lock())
-                message = json.dumps(state)
-                # publishing message to topic
-                is_sent = self.client.publish(self.topic, message)
+        while len(vis_send_buffer):
+            state = read_data(vis_send_buffer, threading.Lock())
+            message = json.dumps(state)
+            # publishing message to topic
+            is_sent = self.client.publish(self.topic, message)
 
     def receive(self):
         def on_message(client, data, message):
