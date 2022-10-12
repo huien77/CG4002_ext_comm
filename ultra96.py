@@ -131,15 +131,17 @@ class AIDetector(threading.Thread):
             if len(IMU_buffer):
                 data = read_data(IMU_buffer, state_lock)
                 action = self.predict_action(data["V"])
+
+                print("predicted action: ", action)
                 
                 if (action != "idle"):
                     last_detected = action
                 
                 print("[AI] Last detected: ", last_detected)
-                print("[AI] Received data: ", data["V"])
+                # print("[AI] Received data: ", data["V"])
 
                 input_data(AI_buffer, state_lock, action)
-                print("AI buffer: ", AI_buffer)
+                #print("AI buffer: ", AI_buffer)
 
             if len(AI_buffer):
                 action = read_data(AI_buffer, state_lock)
@@ -150,19 +152,19 @@ class AIDetector(threading.Thread):
                     temp = game_engine.performAction(action)
                     input_state(temp)
                 
-                print("[Game engine] Resulting state: ", state)
+                #print("[Game engine] Resulting state: ", state)
 
                 if action != "grenade":
                     input_data(eval_buffer, state_lock, state)
-                    print("[Game engine] Sent to eval: ", state)
+                    #print("[Game engine] Sent to eval: ", state)
 
                 input_data(vis_send_buffer, state_lock, state)
-                print("[Game engine] Sent to visualiser:", state)
+                #print("[Game engine] Sent to visualiser:", state)
 
             if len(vis_recv_buffer):
                 # Visualizer sends player that is hit by grenade
                 player_hit = read_data(vis_recv_buffer, state_lock)
-                print("[Game engine] Received from visualiser:", player_hit)
+                #print("[Game engine] Received from visualiser:", player_hit)
                 state = read_state()
                 if player_hit != "none":
                     # minus health based on grenade hit
@@ -170,7 +172,7 @@ class AIDetector(threading.Thread):
 
                 input_state(state)
                 input_data(eval_buffer, state_lock, state)
-                print("[Game engine] Sent to curr state and eval:", state)
+                #print("[Game engine] Sent to curr state and eval:", state)
 
             time.sleep(0.5)
 
@@ -297,7 +299,7 @@ class Server(threading.Thread):
             try:
                 data = self.connection.recv(1024)
                 data = data.decode('utf8')
-                print("[Ultra96 Server] Received from laptop: ", data)
+                # print("[Ultra96 Server] Received from laptop: ", data)
 
                 i = 0
                 j = 0
