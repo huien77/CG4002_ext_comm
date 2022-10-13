@@ -332,20 +332,21 @@ class Client(threading.Thread):
 
     def run(self):
         print("[Eval Server]: RUNNING...")
-        while len(eval_buffer):
-            try:
-                state = read_data(eval_buffer, threading.Lock())
-                self.send_data(state)
+        while True:
+            while len(eval_buffer):
+                try:
+                    state = read_data(eval_buffer, threading.Lock())
+                    self.send_data(state)
 
-                expected_state = self.receive()
-                expected_state = json.loads(expected_state)
-                expected_state['p1']['bullet_hit'] = 'no'
-                expected_state['p2']['bullet_hit'] = 'no'
-                input_state(expected_state)
-                input_data(vis_send_buffer, threading.Lock(), expected_state)
-                
-            except Exception as e:
-                print(e)
+                    expected_state = self.receive()
+                    expected_state = json.loads(expected_state)
+                    expected_state['p1']['bullet_hit'] = 'no'
+                    expected_state['p2']['bullet_hit'] = 'no'
+                    input_state(expected_state)
+                    input_data(vis_send_buffer, threading.Lock(), expected_state)
+                    
+                except Exception as e:
+                    print(e)
             
     def stop(self):
         self.socket.close()
