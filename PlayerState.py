@@ -15,14 +15,14 @@ class Player:
             self.action = "shoot"
             self.bullets -= 1
         else:
-            self.action = ''
+            self.action = 'none'
 
     def grenade(self):
         if self.grenades > 0:
             self.action = "grenade"
             self.grenades -= 1
         else:
-            self.action = ''
+            self.action = 'none'
 
     
     def shield(self):
