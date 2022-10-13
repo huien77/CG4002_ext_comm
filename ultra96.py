@@ -340,7 +340,7 @@ class Client(threading.Thread):
     def run(self):
         print("[Eval Server]: RUNNING...")
         while True:
-            print("Where this?", eval_buffer)
+            print("Where this?", eval_buffer, len(eval_buffer))
             while len(eval_buffer):
                 try:
                     print("\n\n\n\nOI, here me??\n\n\n\n")
