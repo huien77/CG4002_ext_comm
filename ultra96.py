@@ -336,6 +336,7 @@ class Client(threading.Thread):
                     expected_state['p2']['bullet_hit'] = 'no'
                     input_state(expected_state)
                     input_data(vis_send_buffer, threading.Lock(), expected_state)
+                    state_publish()
                     
                 except Exception as e:
                     print(e)
