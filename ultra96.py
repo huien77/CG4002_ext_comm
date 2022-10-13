@@ -165,6 +165,7 @@ class AIDetector(threading.Thread):
 
                     input_state(temp)
                     input_data(vis_send_buffer,state_lock, temp)
+                    mqtt_p.publish()
                     # state_publish(mqtt_p)
                     state = read_state()
                     del state['p1']['bullet_hit']
@@ -181,6 +182,7 @@ class AIDetector(threading.Thread):
                 temp = game_engine.performAction('yes1')
                 input_state(temp)
                 input_data(vis_send_buffer,state_lock, temp)
+                mqtt_p.publish()
 
                 #print("[Game engine] Sent to curr state and eval:", state)
 
@@ -191,6 +193,7 @@ class AIDetector(threading.Thread):
                 
                 input_state(temp)
                 input_data(vis_send_buffer,state_lock, temp)
+                mqtt_p.publish()
                 state = read_state()
                 del state['p1']['bullet_hit']
                 del state['p2']['bullet_hit']
@@ -231,11 +234,13 @@ class AIDetector(threading.Thread):
 
                 input_state(temp)
                 input_data(vis_send_buffer,state_lock, temp)
+                mqtt_p.publish()
                 # state_publish(mqtt_p)
 
                 temp["p2"]["bullet_hit"]="no"
                 input_state(temp)
                 input_data(vis_send_buffer,state_lock, temp)
+                mqtt_p.publish()
 
             state = read_state()
             state["p1"]["shield_time"] = int(state["p1"]["shield_time"])
@@ -248,6 +253,7 @@ class AIDetector(threading.Thread):
 
                 input_state(state)
                 input_data(vis_send_buffer,state_lock, temp)
+                mqtt_p.publish()
                 # state_publish(mqtt_p)
 
 # for visualizer
@@ -338,7 +344,6 @@ class Client(threading.Thread):
                     expected_state['p2']['bullet_hit'] = 'no'
                     input_state(expected_state)
                     input_data(vis_send_buffer, threading.Lock(), expected_state)
-                    state_publish()
                     
                 except Exception as e:
                     print(e)
