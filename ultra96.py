@@ -1,3 +1,4 @@
+from argparse import Action
 from re import M
 import re
 import socket
@@ -47,7 +48,7 @@ from Crypto.Random import get_random_bytes
 PLAYER_STATE_VIS = {
     "p1": {
         "hp": 100,
-        "action": '',
+        "action": 'none',
         "bullets": 6,
         "bullet_hit": "no", 
         "grenades": 2,
@@ -58,7 +59,7 @@ PLAYER_STATE_VIS = {
         },
     "p2": {
         "hp": 100,
-        "action": '',
+        "action": 'none',
         "bullets": 6,
         "bullet_hit": "no",
         "grenades": 2,
@@ -78,7 +79,7 @@ AI_buffer = []
 # internal comm buffer
 IMU_buffer = []
 GUN_buffer = []
-Shield_buffer = []
+vest_buffer = []
 # eval server buffer
 eval_buffer = []
 # send to visualizer buffer
@@ -172,7 +173,7 @@ class AIDetector(threading.Thread):
                     del to_eval_state
                     state_publish(mqtt_p)
 
-                    temp['p1']['action'] = ''
+                    temp['p1']['action'] = 'none'
                     input_state(temp)
                     state_publish(mqtt_p)
 
@@ -187,17 +188,24 @@ class AIDetector(threading.Thread):
                 #print("[Game engine] Sent to curr state and eval:", state)
 
             if len(GUN_buffer):
-                if len(Shield_buffer):
-                    read_data(Shield_buffer, state_lock)
-                    temp = read_state()
-                    temp["p2"]["bullet_hit"] = "yes"
+                
                 read_data(GUN_buffer, state_lock)
                 temp = game_engine.performAction('shoot')
                 input_state(temp)
                 state_publish(mqtt_p)
 
                 temp['p1']['action'] = 'none'
-                temp['p2']['bullet_hit']="no"
+                input_state(temp)
+                state_publish(mqtt_p)
+
+            if len(vest_buffer):
+                read_data(vest_buffer, state_lock)
+                action = "yes"
+                temp = game_engine.performAction(action)
+                input_state(temp)
+                state_publish(mqtt_p)
+
+                temp["p2"]["bullet_hit"]="no"
                 input_state(temp)
                 state_publish(mqtt_p)
 
@@ -349,7 +357,7 @@ class Server(threading.Thread):
                         elif json_data["D"] == "GUN":
                             input_data(GUN_buffer, state_lock, json_data)
                         else:
-                            input_data(Shield_buffer, state_lock, json_data)
+                            input_data(vest_buffer, state_lock, json_data)
                         
                         i = j + 1
 

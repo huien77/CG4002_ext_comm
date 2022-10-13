@@ -49,6 +49,7 @@ class Player:
 
     def bulletDamage(self):
         self.takeDamage(10)
+        self.bullet_hit = 'yes'
 
     def grenadeDamage(self):
         self.takeDamage(30)

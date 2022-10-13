@@ -5,3 +5,4 @@ class Actions:
     reload  = "reload"
     logout  = "logout"
     grenade1 = "yes1"
+    vest2 = "yes"
