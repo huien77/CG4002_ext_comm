@@ -14,6 +14,8 @@ import paho.mqtt.client as mqtt
 from os import getcwd, path
 from pathlib import Path
 from sys import path as sp
+from datetime import datetime
+from datetime import timedelta
 
 sp.append(path.join((Path.cwd()).parent,"jupyter_notebooks","capstoneml","scripts"))
 from start_detector import Detector
@@ -256,17 +258,23 @@ class AIDetector(threading.Thread):
             # state = read_state()
             # state["p1"]["shield_time"] = int(state["p1"]["shield_time"])
 
-            # if (state["p1"]["shield_time"] > 0):
-            #     time.sleep(0.66)
-            #     state["p1"]["shield_time"] -= 1
-            #     if state["p1"]["shield_time"] == 0:
-            #         state["p1"]["shield_health"] = 0
+            if (state["p1"]["shield_time"] > 0):
+                
+                delayed1_time = datetime.now() + timedelta(seconds=1)
+                delayed10_time = datetime.now() + timedelta(seconds=10)
+                
+                if (datetime.now() == delayed1_time):
+                    state["p1"]["shield_time"] -= 1
+                if state["p1"]["shield_time"] == 0:
+                    state["p1"]["shield_health"] = 0
+                    input_data(vis_send_buffer,state_lock, temp)
+                    if (datetime.now() == delayed10_time): 
+                        state_lock.acquire()
+                        mqtt_p.publish()
+                        state_lock.release()
 
-            #     input_state(state)
-            #     input_data(vis_send_buffer,state_lock, temp)
-            #     state_lock.acquire()
-            #     mqtt_p.publish()
-            #     state_lock.release()
+                input_state(state)
+           
             #     # state_publish(mqtt_p)
 
 # for visualizer
