@@ -332,9 +332,10 @@ class Client(threading.Thread):
     def send_data(self, send_dict):
         length, encrypted_text = self.encrypt_message(send_dict)
         m = str(length) + "_"
+        print("data to eval", m)
         self.socket.sendall(m.encode("utf-8"))
         self.socket.sendall(encrypted_text)
-        # print("[Evaluation Client] Sent data")
+        print("[Evaluation Client] Sent data")
 
     # receive from eval server
     def receive(self):
@@ -350,9 +351,10 @@ class Client(threading.Thread):
             while len(eval_buffer):
                 try:
                     state = read_data(eval_buffer, threading.Lock())
-                    print("data to eval",state)
+                    
                     input_data(vis_send_buffer, state_lock, state)
                     mqtt_p.publish()
+                    
                     del state['p1']['bullet_hit']
                     del state['p2']['bullet_hit']
                     self.send_data(state)
@@ -362,7 +364,7 @@ class Client(threading.Thread):
                     expected_state['p1']['bullet_hit'] = 'no'
                     expected_state['p2']['bullet_hit'] = 'no'
                     input_state(expected_state)
-                    input_data(vis_send_buffer, threading.Lock(), expected_state)
+                    #input_data(vis_send_buffer, threading.Lock(), expected_state)
                     
                 except Exception as e:
                     print(e)
