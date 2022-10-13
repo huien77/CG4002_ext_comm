@@ -168,6 +168,7 @@ class AIDetector(threading.Thread):
                     del to_eval_state['p1']['bullet_hit']
                     del to_eval_state['p2']['bullet_hit']
                     input_data(eval_buffer, state_lock, to_eval_state)
+                    print("GHMMMMM...", eval_buffer)
                     del to_eval_state
                     state_publish(mqtt_p)
 
@@ -286,14 +287,15 @@ class Client(threading.Thread):
         return msg
 
     def run(self):
-        action = ''
+        print("[Eval Server]: RUNNING...")
 
-        while len(eval_buffer):
-            state = read_data(eval_buffer, threading.Lock())
-            self.send_data(state)
-            expected_state = self.receive()
-            input_state(expected_state)
-            input_data(vis_send_buffer, threading.Lock(), expected_state)
+        while True:
+            while len(eval_buffer):
+                state = read_data(eval_buffer, threading.Lock())
+                self.send_data(state)
+                expected_state = self.receive()
+                input_state(expected_state)
+                input_data(vis_send_buffer, threading.Lock(), expected_state)
             
     def stop(self):
         self.socket.close()
