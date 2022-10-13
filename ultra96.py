@@ -389,7 +389,7 @@ class Server(threading.Thread):
                 i = 0
                 j = 0
 
-                print(data)
+                # print(data)
                 while j < len(data):
                     if data[i] != '{':
                         i += 1
