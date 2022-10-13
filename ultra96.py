@@ -110,8 +110,7 @@ def input_data(buffer, lock, data):
     lock.release()
 
 def state_publish(mqtt_p):
-    state=read_state()
-    input_data(eval_buffer, state_lock, state)
+    state = read_state()
     input_data(vis_send_buffer, state_lock, state)
     mqtt_p.publish()
 
@@ -140,6 +139,9 @@ class AIDetector(threading.Thread):
         mqtt_p = MQTTClient('visualizer17', 'publish')
         mqtt_p.client.loop_start()
         state_publish(mqtt_p)
+
+        # start ultra96 client to eval server thread
+        my_client = Client(ip_addr, port_num, group_id, secret_key)
         
         while action != "logout":
             while len(IMU_buffer):
@@ -159,6 +161,11 @@ class AIDetector(threading.Thread):
                 if (action != "idle"):
                     temp = game_engine.performAction(action)
                     input_state(temp)
+                    state = read_state()
+                    to_eval_state = state.copy()
+                    del to_eval_state['bullet_hit']
+                    input_data(eval_buffer, state_lock, to_eval_state)
+                    del to_eval_state
                     state_publish(mqtt_p)
 
                     temp['p1']['action'] = ''
@@ -200,6 +207,9 @@ class AIDetector(threading.Thread):
 
                 input_state(state)
                 state_publish(mqtt_p)
+
+            if len(eval_buffer):
+                my_client.run()
 
 # for visualizer
 class MQTTClient(threading.Thread):
@@ -373,9 +383,6 @@ if __name__ == "__main__":
     mqtt_r = MQTTClient('grenade17', 'receive')
     mqtt_r.receive()
     mqtt_r.client.loop_start()
-
-    # start ultra96 client to eval server thread
-    my_client = Client(ip_addr, port_num, group_id, secret_key)
     
     #mqtt_p.terminate()
     #mqtt_r.terminate()
