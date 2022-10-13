@@ -355,8 +355,8 @@ class Client(threading.Thread):
                     input_data(vis_send_buffer, state_lock, state)
                     mqtt_p.publish()
                     
-                    del state['p1']['bullet_hit']
-                    del state['p2']['bullet_hit']
+                    # del state['p1']['bullet_hit']
+                    # del state['p2']['bullet_hit']
                     self.send_data(state)
                     print("data to eval", state)
                     expected_state = self.receive()
