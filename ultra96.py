@@ -339,8 +339,6 @@ class Client(threading.Thread):
 
     # receive from eval server
     def receive(self):
-        temp = data.decode("utf8")
-
         data = b''
         while not data.endswith(b'_'):
             _d = self.connection.recv(1)
