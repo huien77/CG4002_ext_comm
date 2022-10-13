@@ -172,7 +172,6 @@ class AIDetector(threading.Thread):
                     del to_eval_state['p2']['bullet_hit']
                     input_data(eval_buffer, state_lock, to_eval_state)
                     print("GHMMMMM...", eval_buffer, "\nVS\n", state)
-                    del to_eval_state
                     state['p1']['bullet_hit'] = "no"
                     state['p2']['bullet_hit'] = "no"                  
                     state_publish(mqtt_p)
@@ -205,7 +204,6 @@ class AIDetector(threading.Thread):
                 del to_eval_state['p2']['bullet_hit']
                 input_data(eval_buffer, state_lock, to_eval_state)
                 print("GHMMMMM...", eval_buffer, "\nVS\n", state)
-                del to_eval_state
                 state['p1']['bullet_hit'] = "no"
                 state['p2']['bullet_hit'] = "no"                  
                 state_publish(mqtt_p)
