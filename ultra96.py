@@ -335,6 +335,11 @@ class Client(threading.Thread):
             while len(eval_buffer):
                 try:
                     print("\n\n\n\nOI, here me??\n\n\n\n")
+                    
+
+                    state = read_data(eval_buffer, threading.Lock())
+                    self.send_data(state)
+
                     # expected_state = self.receive()
                     # if (expected_state):
                     #     expected_state = json.loads(expected_state)
@@ -343,11 +348,6 @@ class Client(threading.Thread):
                     # else:
                     #     state = read_state()
                     #     expected_state = state
-                    
-                    # print("expected state should have bullet hit", expected_state)
-
-                    state = read_data(eval_buffer, threading.Lock())
-                    self.send_data(state)
                     
                     # input_state(expected_state)
                     # input_data(vis_send_buffer, threading.Lock(), expected_state)
