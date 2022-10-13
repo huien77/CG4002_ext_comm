@@ -165,11 +165,11 @@ class AIDetector(threading.Thread):
                     input_state(temp)
                     state = read_state()
                     to_eval_state = state.copy()
-                    print("!!!!! CHECK !!!!!", to_eval_state)
+                    print("!!!!! CHECK !!!!!", to_eval_state, "\n VS \n", state)
                     del to_eval_state['p1']['bullet_hit']
                     del to_eval_state['p2']['bullet_hit']
                     input_data(eval_buffer, state_lock, to_eval_state)
-                    print("GHMMMMM...", eval_buffer)
+                    print("GHMMMMM...", eval_buffer, "\nVS\n", state)
                     del to_eval_state
                     state_publish(mqtt_p)
 
