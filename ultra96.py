@@ -253,21 +253,21 @@ class AIDetector(threading.Thread):
                 # mqtt_p.publish()
                 # state_lock.release()
 
-            state = read_state()
-            state["p1"]["shield_time"] = int(state["p1"]["shield_time"])
+            # state = read_state()
+            # state["p1"]["shield_time"] = int(state["p1"]["shield_time"])
 
-            if (state["p1"]["shield_time"] > 0):
-                time.sleep(0.66)
-                state["p1"]["shield_time"] -= 1
-                if state["p1"]["shield_time"] == 0:
-                    state["p1"]["shield_health"] = 0
+            # if (state["p1"]["shield_time"] > 0):
+            #     time.sleep(0.66)
+            #     state["p1"]["shield_time"] -= 1
+            #     if state["p1"]["shield_time"] == 0:
+            #         state["p1"]["shield_health"] = 0
 
-                input_state(state)
-                input_data(vis_send_buffer,state_lock, temp)
-                state_lock.acquire()
-                mqtt_p.publish()
-                state_lock.release()
-                # state_publish(mqtt_p)
+            #     input_state(state)
+            #     input_data(vis_send_buffer,state_lock, temp)
+            #     state_lock.acquire()
+            #     mqtt_p.publish()
+            #     state_lock.release()
+            #     # state_publish(mqtt_p)
 
 # for visualizer
 class MQTTClient(threading.Thread):
