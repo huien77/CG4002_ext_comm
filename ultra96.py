@@ -101,7 +101,7 @@ def input_state(data):
 
 def read_data(buffer, lock):
     lock.acquire()
-    print("read_dat??", data)
+    print("read_dat??", buffer)
     data = buffer.pop(0)
     lock.release()
     return data
