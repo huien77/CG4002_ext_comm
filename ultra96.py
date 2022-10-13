@@ -350,6 +350,7 @@ class Client(threading.Thread):
             while len(eval_buffer):
                 try:
                     state = read_data(eval_buffer, threading.Lock())
+                    print("data to eval",state)
                     input_data(vis_send_buffer, state_lock, state)
                     mqtt_p.publish()
                     del state['p1']['bullet_hit']
