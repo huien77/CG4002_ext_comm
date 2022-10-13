@@ -294,7 +294,7 @@ class Client(threading.Thread):
             while len(eval_buffer):
                 state = read_data(eval_buffer, threading.Lock())
                 self.send_data(state)
-                expected_state = self.receive()
+                expected_state = json.loads(self.receive())
                 input_state(expected_state)
                 input_data(vis_send_buffer, threading.Lock(), expected_state)
             
