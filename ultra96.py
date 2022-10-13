@@ -391,6 +391,8 @@ class Server(threading.Thread):
 
                 print(data)
                 while j < len(data):
+                    if data[i] != '{':
+                        i += 1
                     if data[j] == '}':
                         json_data = json.loads(data[i:j+1])
 
