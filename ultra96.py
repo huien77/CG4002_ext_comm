@@ -2,6 +2,7 @@ from argparse import Action
 from re import M
 import re
 import socket
+from symbol import eval_input
 import threading
 import time
 import base64
@@ -164,17 +165,17 @@ class AIDetector(threading.Thread):
                     temp = game_engine.performAction(action)
 
                     input_state(temp)
-                    input_data(vis_send_buffer,state_lock, temp)
-                    state_lock.acquire()
-                    mqtt_p.publish()
-                    state_lock.release()
+                    # input_data(vis_send_buffer,state_lock, temp)
+                    # state_lock.acquire()
+                    # mqtt_p.publish()
+                    # state_lock.release()
                     # state_publish(mqtt_p)
                     state = read_state()
-                    del state['p1']['bullet_hit']
-                    del state['p2']['bullet_hit']
-                    input_data(eval_buffer, state_lock, state)
-                    state['p1']['bullet_hit'] = "no"
-                    state['p2']['bullet_hit'] = "no"                  
+                    # del state['p1']['bullet_hit']
+                    # del state['p2']['bullet_hit']
+                    input_data(temp, state_lock, state)
+                    # state['p1']['bullet_hit'] = "no"
+                    # state['p2']['bullet_hit'] = "no"                  
                     
 
             if len(vis_recv_buffer):
@@ -183,10 +184,10 @@ class AIDetector(threading.Thread):
                 #print("[Game engine] Received from visualiser:", player_hit)
                 temp = game_engine.performAction('yes1')
                 input_state(temp)
-                input_data(vis_send_buffer,state_lock, temp)
-                state_lock.acquire()
-                mqtt_p.publish()
-                state_lock.release()
+                input_data(eval_buffer,state_lock, temp)
+                # state_lock.acquire()
+                # mqtt_p.publish()
+                # state_lock.release()
 
                 #print("[Game engine] Sent to curr state and eval:", state)
 
@@ -196,16 +197,16 @@ class AIDetector(threading.Thread):
                 temp = game_engine.performAction('shoot')
                 
                 input_state(temp)
-                input_data(vis_send_buffer,state_lock, temp)
-                state_lock.acquire()
-                mqtt_p.publish()
-                state_lock.release()
-                state = read_state()
-                del state['p1']['bullet_hit']
-                del state['p2']['bullet_hit']
+                # input_data(vis_send_buffer,state_lock, temp)
+                # state_lock.acquire()
+                # mqtt_p.publish()
+                # state_lock.release()
+                # state = read_state()
+                # del state['p1']['bullet_hit']
+                # del state['p2']['bullet_hit']
                 input_data(eval_buffer, state_lock, state)
-                state['p1']['bullet_hit'] = "no"
-                state['p2']['bullet_hit'] = "no"                  
+                # state['p1']['bullet_hit'] = "no"
+                # state['p2']['bullet_hit'] = "no"                  
                 
                 
                 # input_state(temp)
@@ -239,18 +240,18 @@ class AIDetector(threading.Thread):
 
 
                 input_state(temp)
-                input_data(vis_send_buffer,state_lock, temp)
-                state_lock.acquire()
-                mqtt_p.publish()
-                state_lock.release()
+                input_data(eval_buffer, state_lock, temp)
+                # state_lock.acquire()
+                # mqtt_p.publish()
+                # state_lock.release()
                 # state_publish(mqtt_p)
 
-                temp["p2"]["bullet_hit"]="no"
-                input_state(temp)
-                input_data(vis_send_buffer,state_lock, temp)
-                state_lock.acquire()
-                mqtt_p.publish()
-                state_lock.release()
+                # temp["p2"]["bullet_hit"]="no"
+                # input_state(temp)
+                # input_data(vis_send_buffer,state_lock, temp)
+                # state_lock.acquire()
+                # mqtt_p.publish()
+                # state_lock.release()
 
             state = read_state()
             state["p1"]["shield_time"] = int(state["p1"]["shield_time"])
@@ -344,10 +345,15 @@ class Client(threading.Thread):
 
     def run(self):
         print("[Eval Server]: RUNNING...")
+        mqtt_p = MQTTClient('visualizer17', 'publish')
+        mqtt_p.loop_start()
         while True:
             while len(eval_buffer):
                 try:
                     state = read_data(eval_buffer, threading.Lock())
+                    mqtt_p.publish()
+                    del state['p1']['bullet_hit']
+                    del state['p2']['bullet_hit']
                     self.send_data(state)
 
                     expected_state = self.receive()
