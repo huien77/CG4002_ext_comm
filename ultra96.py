@@ -101,6 +101,7 @@ def input_state(data):
 
 def read_data(buffer, lock):
     lock.acquire()
+    print("read_dat??", data)
     data = buffer.pop(0)
     lock.release()
     return data
@@ -340,6 +341,7 @@ class Client(threading.Thread):
         while True:
             print("Where this?", eval_buffer, len(eval_buffer))
             while len(eval_buffer):
+                print("SHENMEE????", eval_buffer, len(eval_buffer))
                 try:
                     print("\n\n\n\nOI, here me??\n\n\n\n")
                     expected_state = json.loads(self.receive())
