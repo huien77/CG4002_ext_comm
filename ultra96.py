@@ -284,7 +284,7 @@ class MQTTClient(threading.Thread):
             state = read_data(vis_send_buffer, threading.Lock())
             message = json.dumps(state)
             # publishing message to topic
-            is_sent = self.client.publish(self.topic, message)
+            is_sent = self.client.publish(self.topic, message, qos = 1)
 
     def receive(self):
         def on_message(client, data, message):
