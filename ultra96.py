@@ -331,16 +331,12 @@ class Client(threading.Thread):
                     self.send_data(state)
 
                     expected_state = self.receive()
-                    if (expected_state):
-                        expected_state = json.loads(expected_state)
-                        expected_state['p1']['bullet_hit'] = 'no'
-                        expected_state['p2']['bullet_hit'] = 'no'
-                    else:
-                        state = read_state()
-                        expected_state = state
-                    
+                    expected_state = json.loads(expected_state)
+                    expected_state['p1']['bullet_hit'] = 'no'
+                    expected_state['p2']['bullet_hit'] = 'no'
                     input_state(expected_state)
                     input_data(vis_send_buffer, threading.Lock(), expected_state)
+                    
                 except Exception as e:
                     print(e)
             
