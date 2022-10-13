@@ -164,7 +164,7 @@ class AIDetector(threading.Thread):
                     input_state(temp)
                     state = read_state()
                     to_eval_state = state.copy()
-                    del to_eval_state['bullet_hit']
+                    del to_eval_state['p1']['bullet_hit']
                     input_data(eval_buffer, state_lock, to_eval_state)
                     del to_eval_state
                     state_publish(mqtt_p)
