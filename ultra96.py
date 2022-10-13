@@ -209,9 +209,6 @@ class AIDetector(threading.Thread):
                 input_state(state)
                 state_publish(mqtt_p)
 
-            if len(eval_buffer):
-                my_client.run()
-
 # for visualizer
 class MQTTClient(threading.Thread):
     def __init__(self, topic, client_name):
