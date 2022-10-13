@@ -163,15 +163,15 @@ class AIDetector(threading.Thread):
                 if (action != "idle"):
                     temp = game_engine.performAction(action)
 
-
                     input_state(temp)
+                    state_publish(mqtt_p)
                     state = read_state()
                     del state['p1']['bullet_hit']
                     del state['p2']['bullet_hit']
                     input_data(eval_buffer, state_lock, state)
                     state['p1']['bullet_hit'] = "no"
                     state['p2']['bullet_hit'] = "no"                  
-                    state_publish(mqtt_p)
+                    
 
                     temp['p1']['action'] = 'none'
                     input_state(temp)
@@ -194,13 +194,14 @@ class AIDetector(threading.Thread):
                 
                 
                 input_state(temp)
+                state_publish(mqtt_p)
                 state = read_state()
                 del state['p1']['bullet_hit']
                 del state['p2']['bullet_hit']
                 input_data(eval_buffer, state_lock, state)
                 state['p1']['bullet_hit'] = "no"
                 state['p2']['bullet_hit'] = "no"                  
-                state_publish(mqtt_p)
+                
 
                 temp['p1']['action'] = 'none'
                 input_state(temp)
@@ -334,23 +335,20 @@ class Client(threading.Thread):
         while True:
             while len(eval_buffer):
                 try:
-                    print("\n\n\n\nOI, here me??\n\n\n\n")
-                    
-
                     state = read_data(eval_buffer, threading.Lock())
                     self.send_data(state)
 
-                    # expected_state = self.receive()
-                    # if (expected_state):
-                    #     expected_state = json.loads(expected_state)
-                    #     expected_state['p1']['bullet_hit'] = 'no'
-                    #     expected_state['p2']['bullet_hit'] = 'no'
-                    # else:
-                    #     state = read_state()
-                    #     expected_state = state
+                    expected_state = self.receive()
+                    if (expected_state):
+                        expected_state = json.loads(expected_state)
+                        expected_state['p1']['bullet_hit'] = 'no'
+                        expected_state['p2']['bullet_hit'] = 'no'
+                    else:
+                        state = read_state()
+                        expected_state = state
                     
-                    # input_state(expected_state)
-                    # input_data(vis_send_buffer, threading.Lock(), expected_state)
+                    input_state(expected_state)
+                    input_data(vis_send_buffer, threading.Lock(), expected_state)
                 except Exception as e:
                     print(e)
             
