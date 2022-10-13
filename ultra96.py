@@ -346,7 +346,7 @@ class Client(threading.Thread):
     def run(self):
         print("[Eval Server]: RUNNING...")
         mqtt_p = MQTTClient('visualizer17', 'publish')
-        mqtt_p.loop_start()
+        mqtt_p.client.loop_start()
         while True:
             while len(eval_buffer):
                 try:
