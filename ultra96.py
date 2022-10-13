@@ -204,7 +204,7 @@ class AIDetector(threading.Thread):
                 # state = read_state()
                 # del state['p1']['bullet_hit']
                 # del state['p2']['bullet_hit']
-                input_data(eval_buffer, state_lock, state)
+                input_data(eval_buffer, state_lock, temp)
                 # state['p1']['bullet_hit'] = "no"
                 # state['p2']['bullet_hit'] = "no"                  
                 
@@ -438,12 +438,10 @@ class Server(threading.Thread):
 
                 i = 0
                 j = 0
-
-                print(data)
                 while j < len(data):
                     if data[i] != '{':
                         i += 1
-                    if data[j] == '}':
+                    if data[j] == '}' and data[i] == '{':
                         json_data = json.loads(data[i:j+1])
 
                         if json_data["D"] == "IMU":
