@@ -162,6 +162,8 @@ class AIDetector(threading.Thread):
 
                 if (action != "idle"):
                     temp = game_engine.performAction(action)
+
+
                     input_state(temp)
                     state = read_state()
                     to_eval_state = state.copy()
@@ -337,22 +339,23 @@ class Client(threading.Thread):
 
     def run(self):
         print("[Eval Server]: RUNNING...")
+        while True:
+            print("Where this?", eval_buffer)
+            while len(eval_buffer):
+                try:
+                    print("\n\n\n\nOI, here me??\n\n\n\n")
+                    expected_state = json.loads(self.receive())
+                    expected_state['p1']['bullet_hit'] = 'no'
+                    expected_state['p2']['bullet_hit'] = 'no'
+                    print("expected state should have bullet hit", expected_state)
 
-        while len(eval_buffer):
-            try:
-                print("\n\n\n\nOI, here me??\n\n\n\n")
-                expected_state = json.loads(self.receive())
-                expected_state['p1']['bullet_hit'] = 'no'
-                expected_state['p2']['bullet_hit'] = 'no'
-                print("expected state should have bullet hit", expected_state)
-
-                state = read_data(eval_buffer, threading.Lock())
-                self.send_data(state)
-                
-                input_state(expected_state)
-                input_data(vis_send_buffer, threading.Lock(), expected_state)
-            except Exception as e:
-                print(e)
+                    state = read_data(eval_buffer, threading.Lock())
+                    self.send_data(state)
+                    
+                    input_state(expected_state)
+                    input_data(vis_send_buffer, threading.Lock(), expected_state)
+                except Exception as e:
+                    print(e)
             
     def stop(self):
         self.socket.close()
