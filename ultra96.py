@@ -196,12 +196,13 @@ class AIDetector(threading.Thread):
                 input_state(temp)
                 state_publish(mqtt_p)
 
-                temp['p1']['action'] = ''
+                temp['p1']['action'] = 'none'
                 temp['p2']['bullet_hit']="no"
                 input_state(temp)
                 state_publish(mqtt_p)
 
             state = read_state()
+            state["p1"]["shield_time"] = int(state["p1"]["shield_time"])
 
             if (state["p1"]["shield_time"] > 0):
                 time.sleep(0.66)
