@@ -21,28 +21,28 @@ from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 from Crypto.Random import get_random_bytes
 
-PLAYER_STATE = {
-    "p1": {
-        "hp": 100,
-        "action": None,
-        "bullets": 6,
-        "grenades": 2,
-        "shield_time": 0,
-        "shield_health": 0,
-        "num_shield": 3,
-        "num_deaths": 0
-        },
-    "p2": {
-        "hp": 100,
-        "action": None,
-        "bullets": 6,
-        "grenades": 2,
-        "shield_time": 0,
-        "shield_health": 0,
-        "num_shield": 3,
-        "num_deaths": 0
-        }
-}
+# PLAYER_STATE = {
+#     "p1": {
+#         "hp": 100,
+#         "action": None,
+#         "bullets": 6,
+#         "grenades": 2,
+#         "shield_time": 0,
+#         "shield_health": 0,
+#         "num_shield": 3,
+#         "num_deaths": 0
+#         },
+#     "p2": {
+#         "hp": 100,
+#         "action": None,
+#         "bullets": 6,
+#         "grenades": 2,
+#         "shield_time": 0,
+#         "shield_health": 0,
+#         "num_shield": 3,
+#         "num_deaths": 0
+#         }
+# }
 
 PLAYER_STATE_VIS = {
     "p1": {
@@ -70,7 +70,7 @@ PLAYER_STATE_VIS = {
 }
 
 state_lock = threading.Lock()
-curr_state = PLAYER_STATE
+# curr_state = PLAYER_STATE
 curr_state_vis = PLAYER_STATE_VIS
 
 # AI buffer
@@ -88,14 +88,14 @@ vis_recv_buffer = []
 
 def read_state():
     state_lock.acquire()
-    data = curr_state
+    data = curr_state_vis
     state_lock.release()
     return data
 
 def input_state(data):
-    global curr_state
+    global curr_state_vis
     state_lock.acquire()
-    curr_state = data
+    curr_state_vis = data
     state_lock.release()
 
 def read_data(buffer, lock):
@@ -164,7 +164,9 @@ class AIDetector(threading.Thread):
                     input_state(temp)
                     state = read_state()
                     to_eval_state = state.copy()
+                    print("!!!!! CHECK !!!!!", to_eval_state)
                     del to_eval_state['p1']['bullet_hit']
+                    del to_eval_state['p2']['bullet_hit']
                     input_data(eval_buffer, state_lock, to_eval_state)
                     del to_eval_state
                     state_publish(mqtt_p)
