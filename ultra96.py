@@ -288,13 +288,12 @@ class Client(threading.Thread):
     def run(self):
         action = ''
 
-        while action != 'logout':
-            if len(eval_buffer):
-                state = read_data(eval_buffer, threading.Lock())
-                self.send_data(state)
-                expected_state = self.receive()
-                input_state(expected_state)
-                input_data(vis_send_buffer, threading.Lock(), expected_state)
+        while len(eval_buffer):
+            state = read_data(eval_buffer, threading.Lock())
+            self.send_data(state)
+            expected_state = self.receive()
+            input_state(expected_state)
+            input_data(vis_send_buffer, threading.Lock(), expected_state)
             
     def stop(self):
         self.socket.close()
