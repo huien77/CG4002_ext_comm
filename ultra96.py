@@ -193,17 +193,55 @@ class AIDetector(threading.Thread):
                 
                 read_data(GUN_buffer, state_lock)
                 temp = game_engine.performAction('shoot')
+                
+                
                 input_state(temp)
+                state = read_state()
+                to_eval_state = state.copy()
+                print("!!!!! CHECK !!!!!", to_eval_state, "\n VS \n", state)
+                del to_eval_state['p1']['bullet_hit']
+                del to_eval_state['p2']['bullet_hit']
+                input_data(eval_buffer, state_lock, to_eval_state)
+                print("GHMMMMM...", eval_buffer, "\nVS\n", state)
+                del to_eval_state
+                state['p1']['bullet_hit'] = "no"
+                state['p2']['bullet_hit'] = "no"                  
                 state_publish(mqtt_p)
 
                 temp['p1']['action'] = 'none'
                 input_state(temp)
                 state_publish(mqtt_p)
+                
+                # input_state(temp)
+                # state_publish(mqtt_p)
+
+                # temp['p1']['action'] = 'none'
+                # input_state(temp)
+                # state_publish(mqtt_p)
 
             if len(vest_buffer):
                 read_data(vest_buffer, state_lock)
                 action = "yes"
                 temp = game_engine.performAction(action)
+
+                # input_state(temp)
+                # state = read_state()
+                # to_eval_state = state.copy()
+                # print("!!!!! CHECK !!!!!", to_eval_state, "\n VS \n", state)
+                # del to_eval_state['p1']['bullet_hit']
+                # del to_eval_state['p2']['bullet_hit']
+                # input_data(eval_buffer, state_lock, to_eval_state)
+                # print("GHMMMMM...", eval_buffer, "\nVS\n", state)
+                # del to_eval_state
+                # state['p1']['bullet_hit'] = "no"
+                # state['p2']['bullet_hit'] = "no"                  
+                # state_publish(mqtt_p)
+
+                # temp['p1']['action'] = 'none'
+                # input_state(temp)
+                # state_publish(mqtt_p)
+
+
                 input_state(temp)
                 state_publish(mqtt_p)
 
