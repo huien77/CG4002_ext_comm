@@ -173,10 +173,6 @@ class AIDetector(threading.Thread):
                     state['p2']['bullet_hit'] = "no"                  
                     
 
-                    temp['p1']['action'] = 'none'
-                    input_state(temp)
-                    state_publish(mqtt_p)
-
             if len(vis_recv_buffer):
                 # Visualizer sends player that is hit by grenade
                 read_data(vis_recv_buffer, state_lock)
@@ -202,10 +198,6 @@ class AIDetector(threading.Thread):
                 state['p1']['bullet_hit'] = "no"
                 state['p2']['bullet_hit'] = "no"                  
                 
-
-                temp['p1']['action'] = 'none'
-                input_state(temp)
-                state_publish(mqtt_p)
                 
                 # input_state(temp)
                 # state_publish(mqtt_p)
