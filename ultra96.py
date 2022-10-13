@@ -339,9 +339,38 @@ class Client(threading.Thread):
 
     # receive from eval server
     def receive(self):
-        data = self.socket.recv(1024)
         temp = data.decode("utf8")
-        msg = temp.split('_')[1]
+
+        data = b''
+        while not data.endswith(b'_'):
+            _d = self.connection.recv(1)
+            if not _d:
+                data = b''
+                break
+            data += _d
+
+        if len(data) == 0:
+            print('no more data from the client')
+            self.stop()
+
+        data = data.decode("utf-8")
+        length = int(data[:-1])
+
+        data = b''
+        while len(data) < length:
+            _d = self.connection.recv(length - len(data))
+            if not _d:
+                data = b''
+                break
+            data += _d
+        
+        if len(data) == 0:
+            print('no more data from the client')
+            self.stop()
+
+        msg = data.decode("utf8")  # Decode raw bytes to UTF-8
+        # game_state_received = self.decrypt_message(msg)
+        # msg = temp.split('_')[1]
         return msg
 
     def run(self):
