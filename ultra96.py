@@ -101,7 +101,6 @@ def input_state(data):
 
 def read_data(buffer, lock):
     lock.acquire()
-    print("read_dat??", buffer)
     data = buffer.pop(0)
     lock.release()
     return data
@@ -167,12 +166,9 @@ class AIDetector(threading.Thread):
 
                     input_state(temp)
                     state = read_state()
-                    to_eval_state = state.copy()
-                    print("!!!!! CHECK !!!!!", to_eval_state, "\n VS \n", state)
-                    del to_eval_state['p1']['bullet_hit']
-                    del to_eval_state['p2']['bullet_hit']
-                    input_data(eval_buffer, state_lock, to_eval_state)
-                    print("GHMMMMM...", eval_buffer, "\nVS\n", state)
+                    del state['p1']['bullet_hit']
+                    del state['p2']['bullet_hit']
+                    input_data(eval_buffer, state_lock, state)
                     state['p1']['bullet_hit'] = "no"
                     state['p2']['bullet_hit'] = "no"                  
                     state_publish(mqtt_p)
@@ -199,12 +195,9 @@ class AIDetector(threading.Thread):
                 
                 input_state(temp)
                 state = read_state()
-                to_eval_state = state.copy()
-                print("!!!!! CHECK !!!!!", to_eval_state, "\n VS \n", state)
-                del to_eval_state['p1']['bullet_hit']
-                del to_eval_state['p2']['bullet_hit']
-                input_data(eval_buffer, state_lock, to_eval_state)
-                print("GHMMMMM...", eval_buffer, "\nVS\n", state)
+                del state['p1']['bullet_hit']
+                del state['p2']['bullet_hit']
+                input_data(eval_buffer, state_lock, state)
                 state['p1']['bullet_hit'] = "no"
                 state['p2']['bullet_hit'] = "no"                  
                 state_publish(mqtt_p)
@@ -339,9 +332,7 @@ class Client(threading.Thread):
     def run(self):
         print("[Eval Server]: RUNNING...")
         while True:
-            print("Where this?", eval_buffer, len(eval_buffer))
             while len(eval_buffer):
-                print("SHENMEE????", eval_buffer, len(eval_buffer))
                 try:
                     print("\n\n\n\nOI, here me??\n\n\n\n")
                     expected_state = json.loads(self.receive())
