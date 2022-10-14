@@ -220,7 +220,7 @@ class AIDetector(threading.Thread):
 
             if len(vest_buffer):
                 read_data(vest_buffer, state_lock)
-                action = "yes"
+                action = "bullet1"
                 temp = game_engine.performAction(action)
 
                 # input_state(temp)
