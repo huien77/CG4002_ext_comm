@@ -313,7 +313,7 @@ class Server(threading.Thread):
         try:
             data = b''
             while not data.endswith(b'_'):
-                _d = self.server_socket.recv(1)
+                _d = self.connection.recv(1)
                 if not _d:
                     data = b''
                     break
@@ -328,7 +328,7 @@ class Server(threading.Thread):
 
             data = b''
             while len(data) < length:
-                _d = self.server_socket.recv(length - len(data))
+                _d = self.connection.recv(length - len(data))
                 if not _d:
                     data = b''
                     break
