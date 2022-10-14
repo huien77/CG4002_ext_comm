@@ -111,16 +111,17 @@ def input_data(buffer, lock, data):
     buffer.append(data)
     lock.release()
 
-def state_publish(mqtt_p):
-    state = read_state()
-    input_data(vis_send_buffer, state_lock, state)
-    mqtt_p.publish()
+# def state_publish(mqtt_p):
+#     state = read_state()
+#     input_data(vis_send_buffer, state_lock, state)
+#     mqtt_p.publish()
 
 # for AI
 class AIDetector(threading.Thread):
     def __init__(self):
         super().__init__()
         self.detector = Detector()
+        print("AI thread started")
 
     def predict_action(self, data):
         actions = ["logout", "grenade", "idle", "reload", "shield"]
@@ -173,7 +174,7 @@ class AIDetector(threading.Thread):
                     state = read_state()
                     # del state['p1']['bullet_hit']
                     # del state['p2']['bullet_hit']
-                    input_data(eval_buffer, state_lock, state)
+                    input_data(eval_buffer, state_lock, temp)
                     # state['p1']['bullet_hit'] = "no"
                     # state['p2']['bullet_hit'] = "no"                  
                     
@@ -184,7 +185,7 @@ class AIDetector(threading.Thread):
                 #print("[Game engine] Received from visualiser:", player_hit)
                 temp = game_engine.performAction('yes1')
                 input_state(temp)
-                input_data(eval_buffer,state_lock, temp)
+                input_data(eval_buffer, state_lock, temp)
                 # state_lock.acquire()
                 # mqtt_p.publish()
                 # state_lock.release()
