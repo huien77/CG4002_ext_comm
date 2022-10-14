@@ -473,29 +473,9 @@ class Server(threading.Thread):
 
         while True:
             try:
-                data = self.connection.recv(1024)
-                data = data.decode('utf8')
-                # print("[Ultra96 Server] Received from laptop: ", data)
-
-                i = 0
-                j = 0
-                while j < len(data):
-                    if data[i] != '{':
-                        i += 1
-                    if data[j] == '}' and data[i] == '{':
-                        json_data = json.loads(data[i:j+1])
-
-                        if json_data["D"] == "IMU":
-                            input_data(IMU_buffer, state_lock, json_data)
-                        elif json_data["D"] == "GUN":
-                            input_data(GUN_buffer, state_lock, json_data)
-                        else:
-                            input_data(vest_buffer, state_lock, json_data)
-                        
-                        i = j + 1
-
-                    j += 1
-                
+                msg = self.receive()
+                data = json.loads(msg)
+                input_data(IMU_buffer, state_lock, data)
             except Exception as _:
                 traceback.print_exc()
                 self.stop()
