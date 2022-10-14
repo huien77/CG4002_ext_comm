@@ -269,12 +269,21 @@ class Client(threading.Thread):
             while eval_buffer.qsize() > 0:
                 try:
                     state = eval_buffer.get_nowait()
-                    
-                    ### CHECK SHIELD ###
-                    nowShield = (state['p1']['action'] == "shield")
-                    # need to decrement the shield timer
-                    if (nowShield):
-                        self.end_time = datetime.now()+timedelta(seconds=10)
+
+                    stored_bh = [state['p1']['bullet_hit'],state['p2']['bullet_hit']]
+
+                    del state['p1']['bullet_hit']
+                    del state['p2']['bullet_hit']
+
+                    freshchg = False
+                    unrelated_actions = ["logout", "reload"]
+                    if state['p1']['action'] == "shield":
+                        if state['p1']['num_shield'] > 0 or (state['p1']['shield_time'] > 0 and state['p1']['shield_time'] < 10):
+                            state['p1']['num_shield'] -= 1
+                            state['p1']['shield_time'] = 10
+                            freshchg = True
+                            self.end_time = datetime.now()+timedelta(seconds=10)
+                            # state['p1']['action'] = "none"
                     elif (state['p1']['shield_time'] > 0):                        
                         # if (datetime.now().second == start_time):
                         time_diff = self.end_time - datetime.now()
@@ -284,25 +293,10 @@ class Client(threading.Thread):
                             state['p1']['shield_health'] = 0
                         elif time_diff.total_seconds() > 0:
                             state['p1']['shield_time'] = int(time_diff.total_seconds())
-                        # vis_send_buffer.put_nowait(self.player_state)
-                        # self.mqtt_p.publish()
 
-                    stored_bh = [state['p1']['bullet_hit'],state['p2']['bullet_hit']]
-
-                    del state['p1']['bullet_hit']
-                    del state['p2']['bullet_hit']
-
-                    freshchg = False
-                    unrelated_actions = ["logout", "reload"]
                     if state['p1']['action'] == "shoot":
                         if state['p1']['bullets'] > 0:
                             state['p1']['bullets'] -= 1
-                            freshchg = True
-                            # state['p1']['action'] = "none"
-                    elif state['p1']['action'] == "shield":
-                        if state['p1']['num_shield'] > 0 or (state['p1']['shield_time'] > 0 and state['p1']['shield_time'] < 10):
-                            state['p1']['num_shield'] -= 1
-                            state['p1']['shield_time'] = 10
                             freshchg = True
                             # state['p1']['action'] = "none"
                     elif state['p1']['action'] == "grenade":
