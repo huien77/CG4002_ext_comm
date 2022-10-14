@@ -198,6 +198,7 @@ class MQTTClient():
 
 # eval_client
 class Client(threading.Thread):
+    end_time = datetime.now()
     def __init__(self, ip_addr, port_num, group_id, secret_key):
         super().__init__()
         # set up a TCP/IP socket to the port number
