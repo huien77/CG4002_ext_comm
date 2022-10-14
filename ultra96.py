@@ -278,7 +278,7 @@ class Client(threading.Thread):
                     freshchg = False
                     unrelated_actions = ["logout", "reload"]
                     if state['p1']['action'] == "shield":
-                        if state['p1']['num_shield'] > 0 or (state['p1']['shield_time'] > 0 and state['p1']['shield_time'] < 10):
+                        if (state['p1']['shield_time'] > 0 and state['p1']['shield_time'] < 10):
                             state['p1']['num_shield'] -= 1
                             state['p1']['shield_time'] = 10
                             freshchg = True
@@ -328,8 +328,9 @@ class Client(threading.Thread):
                     print("\n\treceived from eval ", expected_state,"\n")
                     expected_state = json.loads(expected_state)
                     input_state(expected_state)
-                    print("Watched updated States: ", expected_state['p1']['grenades'], expected_state['p1']['bullets'],"\n\n")
-                    
+                    print("Current updated States: ", "Grenads -", curr_state['p1']['grenades'], "\tBullets -", curr_state['p1']['bullets'],"")
+                    print("Watched updated States: ", "Grenads -", expected_state['p1']['grenades'], "\tBullets -", expected_state['p1']['bullets'],"\n\n")
+
                 # except BrokenPipeError:
                 #     self.socket.connect(self.server_address)
                 except Exception as e:
