@@ -68,17 +68,19 @@ vis_recv_lock = threading.Lock()
 vis_send_buffer = queue.Queue()
 vis_send_lock = threading.Lock()
 
+state_lock = threading.Lock()
+
 def read_state(lock):
     lock.acquire()
     data = curr_state
     lock.release()
     return data
 
-def input_state(data, lock):
+def input_state(data):
     global curr_state
-    lock.acquire()
+    state_lock.acquire()
     curr_state = data
-    lock.release()
+    state_lock.release()
 
 # for AI
 class AIDetector(threading.Thread):
