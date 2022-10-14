@@ -106,7 +106,7 @@ class AIDetector(threading.Thread):
         my_client.start()
         
         while action != "logout":
-            while not IMU_buffer.empty():
+            while IMU_buffer.qsize > 0:
                 data = IMU_buffer.get()
                 print(data)
                 action = self.predict_action(data["V"])
@@ -116,7 +116,7 @@ class AIDetector(threading.Thread):
                     last_detected = action
                     AI_buffer.put_nowait(action)
 
-            if not AI_buffer.empty():
+            if AI_buffer.qsize > 0:
                 # action in AI_buffer should not be idle
                 # !!! for now all the actions are done by player 1
                 # !!! for 2 player game, need extra logic to check the action for p1 or p2
@@ -126,7 +126,7 @@ class AIDetector(threading.Thread):
                 input_state(temp)
                 eval_buffer.put_nowait(temp)
 
-            if not vis_recv_buffer.empty():
+            if vis_recv_buffer.qsize > 0:
                 # visualizer sends player that is hit by grenade
                 vis_recv_buffer.get_nowait()
                 # yes1 means that p1 grenade hit p2
