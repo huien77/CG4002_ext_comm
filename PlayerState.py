@@ -11,21 +11,21 @@ class Player:
         self.bullet_hit = 'no'
 
     def shoot(self):
-        if self.bullets > 0:
+        # if self.bullets > 0:
             self.action = "shoot"
             self.bullets -= 1
-        else:
-            self.action = 'none'
+        # else:
+        #     self.action = 'none'
 
     def grenade(self):
-        if self.grenades > 0:
+        # if self.grenades > 0:
             self.action = "grenade"
             self.grenades -= 1
-        else:
-            self.action = 'none'
+        # else:
+        #     self.action = 'none'
 
     def shield(self):
-        if self.num_shield > 0:
+        # if self.num_shield > 0:
             self.action = "shield"
             self.shield_health = 30
             self.num_shield -= 1

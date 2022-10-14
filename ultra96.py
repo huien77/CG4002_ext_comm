@@ -270,6 +270,7 @@ class Client(threading.Thread):
                 try:
                     state = eval_buffer.get_nowait()
                     
+                    ### CHECK SHIELD ###
                     nowShield = (state['p1']['action'] == "shield")
                     # need to decrement the shield timer
                     if (nowShield):
@@ -285,13 +286,30 @@ class Client(threading.Thread):
                             state['p1']['shield_time'] = int(time_diff.total_seconds())
                         # vis_send_buffer.put_nowait(self.player_state)
                         # self.mqtt_p.publish()
-                    print(state)
-                    vis_send_buffer.put_nowait(state)
-                    mqtt_p.publish()
+
+                    stored_bh = [state['p1']['bullet_hit'],state['p2']['bullet_hit']]
 
                     del state['p1']['bullet_hit']
                     del state['p2']['bullet_hit']
                     self.send_data(state)
+
+                    ### AFTER SEND DATA LOGIC!!!
+                    state['p1']['bullet_hit'] = stored_bh[0]
+                    state['p2']['bullet_hit'] = stored_bh[1]
+
+                    if state['p1']['action']=="shoot":
+                        if state['p1']['bullets'] == 0:
+                            state['p1']['action']="none"
+                    elif state['p1']['action']=="shield":
+                        if state['p1']['num_shield'] == 0 or (state['p1']['shield_time'] > 0) :
+                            state['p1']['action']="none"
+                    elif state['p1']['action']=="grenade":
+                        if state['p1']['grenades'] == 0:
+                            state['p1']['action']="none"
+
+                    vis_send_buffer.put_nowait(state)
+                    mqtt_p.publish()
+
                     state['p1']['bullet_hit'] = "no"
                     state['p2']['bullet_hit'] = "no"
 
