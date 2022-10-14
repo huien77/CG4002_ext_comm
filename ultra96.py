@@ -104,6 +104,8 @@ class AIDetector(threading.Thread):
         # start ultra96 client to eval server thread
         my_client = Client(ip_addr, port_num, group_id, secret_key)
         my_client.start()
+
+        print("something")
         
         while action != "logout":
             print(IMU_buffer.qsize())
