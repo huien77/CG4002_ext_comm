@@ -101,19 +101,19 @@ class AIDetector(threading.Thread):
         game_engine = GameEngine(curr_state)
         game_engine.start()
 
+        try:
         # start ultra96 client to eval server thread
-        my_client = Client(ip_addr, port_num, group_id, secret_key)
-        my_client.start()
-
-        print("something")
+            my_client = Client(ip_addr, port_num, group_id, secret_key)
+            my_client.start()
+        except Exception as e:
+            print(e)
         
         while action != "logout":
             print(IMU_buffer.qsize())
             while IMU_buffer.qsize > 0:
                 data = IMU_buffer.get()
-                print(data)
                 action = self.predict_action(data["V"])
-                
+                print(data)
                 if (action != "idle"):
                     print("Predicted:\t", action, "\t\tPrev_detect:", last_detected)
                     last_detected = action
