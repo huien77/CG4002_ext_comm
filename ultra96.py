@@ -117,11 +117,13 @@ class AIDetector(threading.Thread):
         print("whaup")
         game_engine.start()
 
+        print("AFTER GAME ENGIN START")
+
         # start ultra96 client to eval server thread
         my_client = Client(ip_addr, port_num, group_id, secret_key)
         print("whadup!!!")
         my_client.start()
-        
+        print("MOVING ON...")
         while action != "logout":
             print("!!!!!!!!!!!!!!", len(IMU_buffer))
             while len(IMU_buffer):
