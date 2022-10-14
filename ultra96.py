@@ -308,34 +308,40 @@ class Server(threading.Thread):
 
     # receive from the laptop client
     def receive(self):
-        data = b''
-        while not data.endswith(b'_'):
-            _d = self.server_socket.recv(1)
-            if not _d:
-                data = b''
-                break
-            data += _d
-
-        if len(data) == 0:
-            print('no more data from laptop')
-            self.stop()
-
-        data = data.decode("utf-8")
-        length = int(data[:-1])
-
-        data = b''
-        while len(data) < length:
-            _d = self.server_socket.recv(length - len(data))
-            if not _d:
-                data = b''
-                break
-            data += _d
+        msg = ''
         
-        if len(data) == 0:
-            print('no more data from laptop')
-            self.stop()
+        try:
+            data = b''
+            while not data.endswith(b'_'):
+                _d = self.server_socket.recv(1)
+                if not _d:
+                    data = b''
+                    break
+                data += _d
 
-        msg = data.decode("utf8")
+            if len(data) == 0:
+                print('no more data from laptop')
+                self.stop()
+
+            data = data.decode("utf-8")
+            length = int(data[:-1])
+
+            data = b''
+            while len(data) < length:
+                _d = self.server_socket.recv(length - len(data))
+                if not _d:
+                    data = b''
+                    break
+                data += _d
+            
+            if len(data) == 0:
+                print('no more data from laptop')
+                self.stop()
+
+            msg = data.decode("utf8")
+
+        except ConnectionResetError:
+            self.stop()
         
         return msg
 
