@@ -15,12 +15,13 @@ vis_send_lock = threading.Lock()
 
 def input_data(buffer, lock, data):
     lock.acquire()
-    buffer.put(data)
+    buffer.put_nowait(data)
     lock.release()
 
 def read_data(buffer, lock):
     lock.acquire()
     data = buffer.get()
+    buffer.task_done()
     lock.release()
     return data
 
