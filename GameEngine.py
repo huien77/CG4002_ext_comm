@@ -40,9 +40,6 @@ class GameEngine(threading.Thread):
         self.p1 = Player(self.player_state['p1'])
         self.p2 = Player(self.player_state['p2'])
         
-        self.mqtt_p = MQTTClient('visualizer17', 'publish')
-        self.mqtt_p.client.loop_start()
-
         print('[Game Engine: STARTED \n\n')
 
     def performAction(self, action):
@@ -89,6 +86,9 @@ class GameEngine(threading.Thread):
         return new_state
 
     def run(self):
+        self.mqtt_p = MQTTClient('visualizer17', 'publish')
+        self.mqtt_p.client.loop_start()
+
         # need to decrement the shield timer
         if (self.p1.shield_time > 0):
             delayed1_time = datetime.now() + timedelta(seconds = 1)
