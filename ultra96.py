@@ -279,7 +279,7 @@ class Client(threading.Thread):
                         # if (datetime.now().second == start_time):
                         time_diff = self.end_time - datetime.now()
 
-                        if time_diff.total_seconds() < 0:
+                        if time_diff.total_seconds() <= 0:
                             state['p1']['shield_time'] = 0
                             state['p1']['shield_health'] = 0
                         elif time_diff.total_seconds() > 0:
@@ -319,7 +319,8 @@ class Client(threading.Thread):
                     print("received from eval ", expected_state)
                     expected_state = json.loads(expected_state)
                     input_state(expected_state)
-                    
+                except BrokenPipeError:
+                    self.socket.connect(self.server_address)
                 except Exception as e:
                     print(e)
             
