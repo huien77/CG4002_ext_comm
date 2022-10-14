@@ -441,7 +441,7 @@ class Server(threading.Thread):
                 while j < len(data):
                     if data[i] != '{':
                         i += 1
-                    if data[j] == '}' and data[i] == '{':
+                    if data[j] == '}':
                         json_data = json.loads(data[i:j+1])
 
                         if json_data["D"] == "IMU":
