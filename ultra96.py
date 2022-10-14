@@ -280,6 +280,7 @@ class Client(threading.Thread):
 
                         if time_diff.total_seconds() < 0:
                             state['p1']['shield_time'] = 0
+                            state['p1']['shield_health'] = 0
                         elif time_diff.total_seconds() > 0:
                             state['p1']['shield_time'] = int(time_diff.total_seconds())
                         # vis_send_buffer.put_nowait(self.player_state)
