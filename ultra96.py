@@ -267,7 +267,7 @@ class Client(threading.Thread):
                     # need to decrement the shield timer
                     if (state['p1']['action'] == 'shield'):
                         self.start_time = datetime.now()
-                    if (state['p1']['shield_time'] > 0):                        
+                    if (state['p1']['shield_time'] > 0 or state['p1']['shield_time'] != 10):                        
                         # if (datetime.now().second == start_time):
                         time_diff = datetime.now() - self.start_time
                         
@@ -277,7 +277,7 @@ class Client(threading.Thread):
                             state['p1']['shield_time'] = int(time_diff.total_seconds())
                         # vis_send_buffer.put_nowait(self.player_state)
                         # self.mqtt_p.publish()
-
+                    print(state)
                     vis_send_buffer.put_nowait(state)
                     mqtt_p.publish()
 
