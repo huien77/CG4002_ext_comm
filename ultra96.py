@@ -481,6 +481,7 @@ if __name__ == "__main__":
     # start thread for receiving from laptop
     u_server = Server(int(port_server))
     u_server.start()
+    print(threading.active_count())
 
     # receiving from vis
     mqtt_r = MQTTClient('grenade17', 'receive')
