@@ -348,6 +348,7 @@ class Server(threading.Thread):
             try:
                 msg = self.receive()
                 data = json.loads(msg)
+                print(data)
                 
                 if data["D"] == "IMU":
                     input_data(IMU_buffer, internal_lock, data)
