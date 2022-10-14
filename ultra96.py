@@ -265,11 +265,12 @@ class Client(threading.Thread):
                     vis_send_buffer.put_nowait(state)
                     mqtt_p.publish()
 
-                    bh_removed = copy.deepcopy(state)
-                    del bh_removed['p1']['bullet_hit']
-                    del bh_removed['p2']['bullet_hit']
+                    del state['p1']['bullet_hit']
+                    del state['p2']['bullet_hit']
+                    self.send_data(state)
+                    state['p1']['bullet_hit'] = "no"
+                    state['p2']['bullet_hit'] = "no"
 
-                    self.send_data(bh_removed)
                     # receive expected state from eval server
                     expected_state = self.receive()
                     print("received from eval ", expected_state)
