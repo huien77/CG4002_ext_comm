@@ -347,8 +347,7 @@ class Server(threading.Thread):
                 
                 if data["D"] == "IMU":
                     IMU_buffer.put_nowait(data)
-                    # print(IMU_buffer.qsize())
-                    print(IMU_buffer.queue[0])
+                    print(IMU_buffer.get())
                 elif data["D"] == "GUN":
                     GUN_buffer.put_nowait(data)
                 else:
