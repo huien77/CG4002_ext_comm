@@ -289,7 +289,6 @@ class Client(threading.Thread):
                     elif (state['p1']['shield_time'] > 0):                        
                         # if (datetime.now().second == start_time):
                         time_diff = self.end_time - datetime.now()
-
                         if time_diff.total_seconds() <= 0:
                             state['p1']['shield_time'] = 0
                             state['p1']['shield_health'] = 0
