@@ -106,6 +106,7 @@ class AIDetector(threading.Thread):
         my_client.start()
         
         while action != "logout":
+            print(IMU_buffer.qsize())
             while IMU_buffer.qsize > 0:
                 data = IMU_buffer.get()
                 print(data)
