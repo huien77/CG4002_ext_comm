@@ -316,15 +316,6 @@ class Client(threading.Thread):
 
                     if not freshchg:
                         state['p1']['action'] = "none"
-                        # if state['p1']['action'] == "shoot":
-                        #     if state['p1']['bullets'] == 0:
-                        #         state['p1']['action'] = "none"
-                        # elif state['p1']['action'] == "shield":
-                        #     if state['p1']['num_shield'] == 0 or (state['p1']['shield_time'] > 0 and state['p1']['shield_time'] < 10):
-                        #         state['p1']['action'] = "none"
-                        # elif state['p1']['action'] == "grenade":
-                        #     if state['p1']['grenades'] == 0:
-                        #         state['p1']['action'] = "none"
 
                     vis_send_buffer.put_nowait(state)
                     mqtt_p.publish()
@@ -334,9 +325,11 @@ class Client(threading.Thread):
 
                     # receive expected state from eval server
                     expected_state = self.receive()
-                    print("received from eval ", expected_state)
+                    print("\n\treceived from eval ", expected_state,"\n")
                     expected_state = json.loads(expected_state)
                     input_state(expected_state)
+                    print("Watched updated States: ", expected_state['p1']['grenades'], expected_state['p1']['bullets'],"\n\n")
+                    
                 # except BrokenPipeError:
                 #     self.socket.connect(self.server_address)
                 except Exception as e:
