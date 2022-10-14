@@ -2,9 +2,9 @@ import json
 import threading
 import time
 import queue
+import paho.mqtt.client as mqtt
 from Actions import Actions
 from PlayerState import Player
-from ultra96 import MQTTClient
 from datetime import datetime
 from datetime import timedelta
 
@@ -16,6 +16,32 @@ def input_data(buffer, lock, data):
     lock.acquire()
     buffer.put(data)
     lock.release()
+
+def read_data(buffer, lock):
+    lock.acquire()
+    data = buffer.get()
+    lock.release()
+    return data
+
+class MQTTClient():
+    def __init__(self, topic, client_name):
+        self.topic = topic
+        self.client = mqtt.Client(client_name)
+        self.client.connect('test.mosquitto.org')
+        self.client.subscribe(self.topic)
+
+    # publish message to topic
+    def publish(self):
+        if not vis_send_buffer.empty():
+            state = read_data(vis_send_buffer, vis_send_lock)
+            message = json.dumps(state)
+            # publishing message to topic
+            self.client.publish(self.topic, message, qos = 1)
+
+    def stop(self):
+        self.client.unsubscribe()
+        self.client.loop_stop()
+        self.client.disconnect()
 
 class GameEngine(threading.Thread):
     def __init__(self, player_state):
