@@ -123,7 +123,7 @@ class AIDetector(threading.Thread):
                 # action in AI_buffer should not be idle
                 # !!! for now all the actions are done by player 1
                 # !!! for 2 player game, need extra logic to check the action for p1 or p2
-                action = AI_buffer.get_nowait
+                action = AI_buffer.get_nowait()
                 temp = game_engine.performAction(action)
                 # temp should not have bullet hit, data should be ready to send to eval
                 input_state(temp)
