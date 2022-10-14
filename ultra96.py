@@ -339,8 +339,8 @@ class Client(threading.Thread):
                     print("received from eval ", expected_state)
                     expected_state = json.loads(expected_state)
                     input_state(expected_state)
-                except BrokenPipeError:
-                    self.socket.connect(self.server_address)
+                # except BrokenPipeError:
+                #     self.socket.connect(self.server_address)
                 except Exception as e:
                     print(e)
             
