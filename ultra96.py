@@ -132,7 +132,7 @@ class AIDetector(threading.Thread):
             while len(IMU_buffer):
                 data = read_data(IMU_buffer, state_lock)
                 action = self.predict_action(data["V"])
-                
+                print(data, action)
                 if (action != "idle"):
                     print("Predicted:\t", action, "\t\tPrev_detect:", last_detected)
                     last_detected = action
@@ -361,17 +361,14 @@ class Server(threading.Thread):
     def run(self):
         self.setup_connection()
         AI_detector = AIDetector()
-        print("FIND HIMMM!!...")
         AI_detector.start()
-        print("CHECK ----- 0")
         while True:
             try:
                 msg = self.receive()
                 data = json.loads(msg)
-                print("CHECK --------- 1")
                 if data["D"] == "IMU":
                     input_data(IMU_buffer, state_lock, data)
-                    print(data['V'])
+                    # print(data['V'])
                 elif data["D"] == "GUN":
                     input_data(GUN_buffer, state_lock, data)
                 else:
