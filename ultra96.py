@@ -490,6 +490,9 @@ if __name__ == "__main__":
 
     mqtt_p = MQTTClient('visualizer17', 'publish')
     mqtt_p.client.loop_start()
+
+    for thread in threading.enumerate(): 
+        print(thread.name)
     
     #mqtt_p.terminate()
     #mqtt_r.terminate()
