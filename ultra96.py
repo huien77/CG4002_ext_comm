@@ -267,7 +267,7 @@ class Client(threading.Thread):
                     # need to decrement the shield timer
                     if (state['p1']['action'] == 'shield'):
                         self.start_time = datetime.now()
-                    if (state['p1']['shield_time'] > 0 or state['p1']['shield_time'] != 10):                        
+                    if (state['p1']['shield_time'] > 0):                        
                         # if (datetime.now().second == start_time):
                         time_diff = datetime.now() - self.start_time
                         
