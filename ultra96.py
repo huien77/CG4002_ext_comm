@@ -270,17 +270,17 @@ class Client(threading.Thread):
                 try:
                     state = eval_buffer.get_nowait()
                     
-                    nowShield =state['p1']['action'] == "shield"
+                    nowShield = (state['p1']['action'] == "shield")
                     # need to decrement the shield timer
                     if (nowShield):
-                        self.start_time = datetime.now()
-                    if (state['p1']['shield_time'] > 0 and not nowShield):                        
+                        self.end_time = datetime.now()+timedelta(seconds=10)
+                    elif (state['p1']['shield_time'] > 0):                        
                         # if (datetime.now().second == start_time):
-                        time_diff = datetime.now() - self.start_time
-                        
-                        if time_diff.total_seconds() <= 0:
+                        time_diff = self.end_time - datetime.now()
+
+                        if time_diff.total_seconds() < 0:
                             state['p1']['shield_time'] = 0
-                        else:
+                        elif time_diff.total_seconds() > 0:
                             state['p1']['shield_time'] = int(time_diff.total_seconds())
                         # vis_send_buffer.put_nowait(self.player_state)
                         # self.mqtt_p.publish()
