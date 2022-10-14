@@ -117,6 +117,7 @@ class AIDetector(threading.Thread):
         my_client.start()
         
         while action != "logout":
+            print("!!!!!!!!!!!!!!", len(IMU_buffer))
             while len(IMU_buffer):
                 data = read_data(IMU_buffer, internal_lock)
                 action = self.predict_action(data["V"])
@@ -358,6 +359,7 @@ class Server(threading.Thread):
                 
                 if data["D"] == "IMU":
                     input_data(IMU_buffer, internal_lock, data)
+                    print(data)
                 elif data["D"] == "GUN":
                     input_data(GUN_buffer, internal_lock, data)
                 else:
