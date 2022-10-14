@@ -271,7 +271,7 @@ class Client(threading.Thread):
                         # if (datetime.now().second == start_time):
                         time_diff = datetime.now() - self.start_time
                         
-                        if time_diff <= 0:
+                        if time_diff.total_seconds() <= 0:
                             state['p1']['shield_time'] = 0
                         else:
                             state['p1']['shield_time'] = int(time_diff.total_seconds())
