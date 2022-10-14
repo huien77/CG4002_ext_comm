@@ -8,7 +8,7 @@ class Player:
         self.shield_health = state['shield_health']
         self.num_shield = state['num_shield']
         self.num_deaths = state['num_deaths']
-        self.bullet_hit = state['bullet_hit']
+        self.bullet_hit = 'no'
 
     def shoot(self):
         if self.bullets > 0:
@@ -24,7 +24,6 @@ class Player:
         else:
             self.action = 'none'
 
-    
     def shield(self):
         if self.num_shield > 0:
             self.action = "shield"

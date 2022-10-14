@@ -61,12 +61,12 @@ internal_lock = threading.Lock()
 # eval server buffer
 eval_buffer = queue.Queue()
 eval_lock = threading.Lock()
-# send to visualizer buffer
-vis_send_buffer = queue.Queue()
-vis_send_lock = threading.Lock()
 # receive from visualizer buffer
 vis_recv_buffer = queue.Queue()
 vis_recv_lock = threading.Lock()
+# send to visualizer buffer
+vis_send_buffer = queue.Queue()
+vis_send_lock = threading.Lock()
 
 def read_state(lock):
     lock.acquire()
@@ -165,36 +165,6 @@ class AIDetector(threading.Thread):
                 # !!! doesn't need to send the bullet hit to eval server
                 # !!! but need to send to visualiser
 
-            state = read_state()
-            state["p1"]["shield_time"] = int(state["p1"]["shield_time"])
-
-            if (state["p1"]["shield_time"] > 0):
-                time.sleep(0.66)
-                state["p1"]["shield_time"] -= 1
-                if state["p1"]["shield_time"] == 0:
-                    state["p1"]["shield_health"] = 0
-                    input_data(vis_send_buffer, vis_send_lock, temp)
-                    mqtt_p.publish()
-
-            if (state["p1"]["shield_time"] > 0):
-                
-                delayed1_time = datetime.now() + timedelta(seconds=1)
-                delayed10_time = datetime.now() + timedelta(seconds=10)
-                
-                if (datetime.now() == delayed1_time):
-                    state["p1"]["shield_time"] -= 1
-                if state["p1"]["shield_time"] == 0:
-                    state["p1"]["shield_health"] = 0
-                    input_data(vis_send_buffer,state_lock, temp)
-                    if (datetime.now() == delayed10_time): 
-                        state_lock.acquire()
-                        mqtt_p.publish()
-                        state_lock.release()
-
-                input_state(state)
-           
-            #     # state_publish(mqtt_p)
-
 # for visualizer
 class MQTTClient():
     def __init__(self, topic, client_name):
@@ -241,7 +211,6 @@ class Client(threading.Thread):
     def encrypt_message(self, message):
         # convert to a json string
         plain_text = json.dumps(message)
-        
         iv = get_random_bytes(AES.block_size)
         aes_key = bytes(str(self.secret_key), encoding = "utf8")
         cipher = AES.new(aes_key, AES.MODE_CBC, iv)
@@ -272,7 +241,7 @@ class Client(threading.Thread):
             data += _d
 
         if len(data) == 0:
-            print('no more data from the client')
+            print('no more data from eval server')
             self.stop()
 
         data = data.decode("utf-8")
@@ -287,36 +256,24 @@ class Client(threading.Thread):
             data += _d
         
         if len(data) == 0:
-            print('no more data from the client')
+            print('no more data from eval server')
             self.stop()
 
-        msg = data.decode("utf8")  # Decode raw bytes to UTF-8
-        # game_state_received = self.decrypt_message(msg)
-        # msg = temp.split('_')[1]
+        msg = data.decode("utf8")
+
         return msg
 
     def run(self):
-        print("[Eval Server]: RUNNING...")
-        
         while True:
-            while len(eval_buffer):
+            while not eval_buffer.empty():
                 try:
-                    state = read_data(eval_buffer, threading.Lock())
-                    
-                    input_data(vis_send_buffer, vis_send_lock, state)
-                    mqtt_p.publish()
-                    
-                    # del state['p1']['bullet_hit']
-                    # del state['p2']['bullet_hit']
+                    state = read_data(eval_buffer, eval_lock)
                     self.send_data(state)
-                    # print("data to eval", state)
+                    # receive expected state from eval server
                     expected_state = self.receive()
                     print("received from eval ", expected_state)
                     expected_state = json.loads(expected_state)
-                    expected_state['p1']['bullet_hit'] = 'no'
-                    expected_state['p2']['bullet_hit'] = 'no'
                     input_state(expected_state)
-                    #input_data(vis_send_buffer, threading.Lock(), expected_state)
                     
                 except Exception as e:
                     print(e)
@@ -349,6 +306,39 @@ class Server(threading.Thread):
 
         return client_address
 
+    # receive from the laptop client
+    def receive(self):
+        data = b''
+        while not data.endswith(b'_'):
+            _d = self.socket.recv(1)
+            if not _d:
+                data = b''
+                break
+            data += _d
+
+        if len(data) == 0:
+            print('no more data from laptop')
+            self.stop()
+
+        data = data.decode("utf-8")
+        length = int(data[:-1])
+
+        data = b''
+        while len(data) < length:
+            _d = self.socket.recv(length - len(data))
+            if not _d:
+                data = b''
+                break
+            data += _d
+        
+        if len(data) == 0:
+            print('no more data from laptop')
+            self.stop()
+
+        msg = data.decode("utf8")
+        
+        return msg
+
     def run(self):
         self.setup_connection()
         AI_detector = AIDetector()
@@ -356,28 +346,15 @@ class Server(threading.Thread):
 
         while True:
             try:
-                data = self.connection.recv(1024)
-                data = data.decode('utf8')
-                # print("[Ultra96 Server] Received from laptop: ", data)
-
-                i = 0
-                j = 0
-                while j < len(data):
-                    if data[i] != '{':
-                        i += 1
-                    if data[j] == '}' and data[i] == '{':
-                        json_data = json.loads(data[i:j+1])
-
-                        if json_data["D"] == "IMU":
-                            input_data(IMU_buffer, internal_lock, json_data)
-                        elif json_data["D"] == "GUN":
-                            input_data(GUN_buffer, internal_lock, json_data)
-                        else:
-                            input_data(vest_buffer, internal_lock, json_data)
-                        
-                        i = j + 1
-
-                    j += 1
+                msg = self.receive()
+                data = json.loads(msg)
+                
+                if data["D"] == "IMU":
+                    input_data(IMU_buffer, internal_lock, data)
+                elif data["D"] == "GUN":
+                    input_data(GUN_buffer, internal_lock, data)
+                else:
+                    input_data(vest_buffer, internal_lock, data)
                 
             except Exception as _:
                 traceback.print_exc()
@@ -409,9 +386,3 @@ if __name__ == "__main__":
     mqtt_r = MQTTClient('grenade17', 'receive')
     mqtt_r.receive()
     mqtt_r.client.loop_start()
-
-    mqtt_p = MQTTClient('visualizer17', 'publish')
-    mqtt_p.client.loop_start()
-    
-    #mqtt_p.terminate()
-    #mqtt_r.terminate()
