@@ -12,12 +12,13 @@ import json
 import traceback
 from numpy import empty
 import paho.mqtt.client as mqtt
-from os import getcwd, path
+from os import getcwd, path, stat
 from pathlib import Path
 from sys import path as sp
 from datetime import datetime
 from datetime import timedelta
 import queue
+import copy
 
 sp.append(path.join((Path.cwd()).parent,"jupyter_notebooks","capstoneml","scripts"))
 from start_detector import Detector
@@ -261,7 +262,14 @@ class Client(threading.Thread):
             while eval_buffer.qsize() > 0:
                 try:
                     state = eval_buffer.get_nowait()
-                    self.send_data(state)
+                    vis_send_buffer.put_nowait(state)
+                    mqtt_p.publish()
+
+                    bh_removed = copy.deepcopy(state)
+                    del bh_removed['p1']['bullet_hit']
+                    del bh_removed['p2']['bullet_hit']
+
+                    self.send_data(bh_removed)
                     # receive expected state from eval server
                     expected_state = self.receive()
                     print("received from eval ", expected_state)
@@ -386,3 +394,6 @@ if __name__ == "__main__":
     mqtt_r = MQTTClient('grenade17', 'receive')
     mqtt_r.receive()
     mqtt_r.client.loop_start()
+
+    mqtt_p = MQTTClient('visualizer17', 'publish')
+    mqtt_p.client.loop_start()

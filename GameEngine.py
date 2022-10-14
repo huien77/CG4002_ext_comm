@@ -13,25 +13,25 @@ from datetime import timedelta
 vis_send_buffer = queue.Queue()
 vis_send_lock = threading.Lock()
 
-class MQTTClient():
-    def __init__(self, topic, client_name):
-        self.topic = topic
-        self.client = mqtt.Client(client_name)
-        self.client.connect('test.mosquitto.org')
-        self.client.subscribe(self.topic)
+# class MQTTClient():
+#     def __init__(self, topic, client_name):
+#         self.topic = topic
+#         self.client = mqtt.Client(client_name)
+#         self.client.connect('test.mosquitto.org')
+#         self.client.subscribe(self.topic)
 
-    # publish message to topic
-    def publish(self):
-        if vis_send_buffer.qsize() > 0:
-            state = vis_send_buffer.get_nowait()
-            message = json.dumps(state)
-            # publishing message to topic
-            self.client.publish(self.topic, message, qos = 1)
+#     # publish message to topic
+#     def publish(self):
+#         if vis_send_buffer.qsize() > 0:
+#             state = vis_send_buffer.get_nowait()
+#             message = json.dumps(state)
+#             # publishing message to topic
+#             self.client.publish(self.topic, message, qos = 1)
 
-    def stop(self):
-        self.client.unsubscribe()
-        self.client.loop_stop()
-        self.client.disconnect()
+#     def stop(self):
+#         self.client.unsubscribe()
+#         self.client.loop_stop()
+#         self.client.disconnect()
 
 class GameEngine(threading.Thread):
     def __init__(self, player_state):
@@ -77,27 +77,27 @@ class GameEngine(threading.Thread):
         self.player_state['p1'] = self.p1.__dict__
         self.player_state['p2'] = self.p2.__dict__
 
-        self.mqtt_p.publish()
+        # self.mqtt_p.publish()
 
-        new_state = copy.deepcopy(self.player_state)
-        del new_state['p1']['bullet_hit']
-        del new_state['p2']['bullet_hit']
+        # new_state = copy.deepcopy(self.player_state)
+        # del new_state['p1']['bullet_hit']
+        # del new_state['p2']['bullet_hit']
 
-        return new_state
+        return self.player_state
 
-    def run(self):
-        self.mqtt_p = MQTTClient('visualizer17', 'publish')
-        self.mqtt_p.client.loop_start()
+    # def run(self):
+    #     self.mqtt_p = MQTTClient('visualizer17', 'publish')
+    #     self.mqtt_p.client.loop_start()
 
         # need to decrement the shield timer
-        if (self.p1.shield_time > 0):
-            delayed1_time = datetime.now() + timedelta(seconds = 1)
-            delayed10_time = datetime.now() + timedelta(seconds = 10)
+        # if (self.p1.shield_time > 0):
+        #     delayed1_time = datetime.now() + timedelta(seconds = 1)
+        #     delayed10_time = datetime.now() + timedelta(seconds = 10)
             
-            if (datetime.now() == delayed1_time):
-                self.p1.shield_time -= 1
-            if self.p1.shield_time == 0:
-                vis_send_buffer.put_nowait(self.player_state)
+        #     if (datetime.now() == delayed1_time):
+        #         self.p1.shield_time -= 1
+        #     if self.p1.shield_time == 0:
+        #         vis_send_buffer.put_nowait(self.player_state)
                 
-                if (datetime.now() == delayed10_time): 
-                    self.mqtt_p.publish()
+        #         if (datetime.now() == delayed10_time): 
+        #             self.mqtt_p.publish()
