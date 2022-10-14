@@ -10,12 +10,14 @@ import sys
 import time
 import json
 import traceback
+from numpy import empty
 import paho.mqtt.client as mqtt
 from os import getcwd, path
 from pathlib import Path
 from sys import path as sp
 from datetime import datetime
 from datetime import timedelta
+import queue
 
 sp.append(path.join((Path.cwd()).parent,"jupyter_notebooks","capstoneml","scripts"))
 from start_detector import Detector
@@ -25,35 +27,11 @@ from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 from Crypto.Random import get_random_bytes
 
-# PLAYER_STATE = {
-#     "p1": {
-#         "hp": 100,
-#         "action": None,
-#         "bullets": 6,
-#         "grenades": 2,
-#         "shield_time": 0,
-#         "shield_health": 0,
-#         "num_shield": 3,
-#         "num_deaths": 0
-#         },
-#     "p2": {
-#         "hp": 100,
-#         "action": None,
-#         "bullets": 6,
-#         "grenades": 2,
-#         "shield_time": 0,
-#         "shield_health": 0,
-#         "num_shield": 3,
-#         "num_deaths": 0
-#         }
-# }
-
-PLAYER_STATE_VIS = {
+curr_state = {
     "p1": {
         "hp": 100,
         "action": 'none',
         "bullets": 6,
-        "bullet_hit": "no", 
         "grenades": 2,
         "shield_time": 0,
         "shield_health": 0,
@@ -64,7 +42,6 @@ PLAYER_STATE_VIS = {
         "hp": 100,
         "action": 'none',
         "bullets": 6,
-        "bullet_hit": "no",
         "grenades": 2,
         "shield_time": 0,
         "shield_health": 0,
@@ -73,50 +50,46 @@ PLAYER_STATE_VIS = {
         }
 }
 
-state_lock = threading.Lock()
-# curr_state = PLAYER_STATE
-curr_state_vis = PLAYER_STATE_VIS
-
 # AI buffer
-AI_buffer = []
+AI_buffer = queue.Queue()
+AI_lock = threading.Lock()
 # internal comm buffer
-IMU_buffer = []
-GUN_buffer = []
-vest_buffer = []
+IMU_buffer = queue.Queue(20)
+GUN_buffer = queue.Queue()
+vest_buffer = queue.Queue()
+internal_lock = threading.Lock()
 # eval server buffer
-eval_buffer = []
+eval_buffer = queue.Queue()
+eval_lock = threading.Lock()
 # send to visualizer buffer
-vis_send_buffer = []
+vis_send_buffer = queue.Queue()
+vis_send_lock = threading.Lock()
 # receive from visualizer buffer
-vis_recv_buffer = []
+vis_recv_buffer = queue.Queue()
+vis_recv_lock = threading.Lock()
 
-def read_state():
-    state_lock.acquire()
-    data = curr_state_vis
-    state_lock.release()
+def read_state(lock):
+    lock.acquire()
+    data = curr_state
+    lock.release()
     return data
 
-def input_state(data):
-    global curr_state_vis
-    state_lock.acquire()
-    curr_state_vis = data
-    state_lock.release()
+def input_state(data, lock):
+    global curr_state
+    lock.acquire()
+    curr_state = data
+    lock.release()
 
 def read_data(buffer, lock):
     lock.acquire()
-    data = buffer.pop(0)
+    data = buffer.get()
     lock.release()
     return data
 
 def input_data(buffer, lock, data):
     lock.acquire()
-    buffer.append(data)
+    buffer.put(data)
     lock.release()
-
-def state_publish(mqtt_p):
-    state = read_state()
-    input_data(vis_send_buffer, state_lock, state)
-    mqtt_p.publish()
 
 # for AI
 class AIDetector(threading.Thread):
@@ -132,128 +105,65 @@ class AIDetector(threading.Thread):
 
     def run(self):
         # DEBUGGING
-        action = ""
-        last_detected = ""
+        action = "none"
+        last_detected = "none"
         
         # start game engine
-        game_engine = GameEngine(PLAYER_STATE_VIS)
+        game_engine = GameEngine(curr_state)
         game_engine.start()
-
-        # sending to vis
-        # mqtt_p = MQTTClient('visualizer17', 'publish')
-        # mqtt_p.client.loop_start()
-        # state_publish(mqtt_p)
 
         # start ultra96 client to eval server thread
         my_client = Client(ip_addr, port_num, group_id, secret_key)
         my_client.start()
         
         while action != "logout":
-            while len(IMU_buffer):
-                data = read_data(IMU_buffer, state_lock)
+            while IMU_buffer.full():
+                data = read_data(IMU_buffer, internal_lock)
                 action = self.predict_action(data["V"])
                 
                 if (action != "idle"):
                     print("Predicted:\t", action, "\t\tPrev_detect:", last_detected)
                     last_detected = action
-                    input_data(AI_buffer, state_lock, action)
+                    input_data(AI_buffer, AI_lock, action)
 
-            if len(AI_buffer):
-                action = read_data(AI_buffer, state_lock)
-
-                temp = read_state()
-
-                if (action != "idle"):
-                    temp = game_engine.performAction(action)
-
-                    input_state(temp)
-                    # input_data(vis_send_buffer,state_lock, temp)
-                    # state_lock.acquire()
-                    # mqtt_p.publish()
-                    # state_lock.release()
-                    # state_publish(mqtt_p)
-                    state = read_state()
-                    # del state['p1']['bullet_hit']
-                    # del state['p2']['bullet_hit']
-                    input_data(eval_buffer, state_lock, state)
-                    # state['p1']['bullet_hit'] = "no"
-                    # state['p2']['bullet_hit'] = "no"                  
-                    
-
-            if len(vis_recv_buffer):
-                # Visualizer sends player that is hit by grenade
-                read_data(vis_recv_buffer, state_lock)
-                #print("[Game engine] Received from visualiser:", player_hit)
-                temp = game_engine.performAction('yes1')
-                input_state(temp)
-                input_data(eval_buffer,state_lock, temp)
-                # state_lock.acquire()
-                # mqtt_p.publish()
-                # state_lock.release()
-
-                #print("[Game engine] Sent to curr state and eval:", state)
-
-            if len(GUN_buffer):
-                
-                read_data(GUN_buffer, state_lock)
-                temp = game_engine.performAction('shoot')
-                
-                input_state(temp)
-                # input_data(vis_send_buffer,state_lock, temp)
-                # state_lock.acquire()
-                # mqtt_p.publish()
-                # state_lock.release()
-                # state = read_state()
-                # del state['p1']['bullet_hit']
-                # del state['p2']['bullet_hit']
-                input_data(eval_buffer, state_lock, temp)
-                # state['p1']['bullet_hit'] = "no"
-                # state['p2']['bullet_hit'] = "no"                  
-                
-                
-                # input_state(temp)
-                # state_publish(mqtt_p)
-
-                # temp['p1']['action'] = 'none'
-                # input_state(temp)
-                # state_publish(mqtt_p)
-
-            if len(vest_buffer):
-                read_data(vest_buffer, state_lock)
-                action = "bullet1"
+            if not AI_buffer.empty():
+                # action in AI_buffer should not be idle
+                # !!! for now all the actions are done by player 1
+                # !!! for 2 player game, need extra logic to check the action for p1 or p2
+                action = read_data(AI_buffer, AI_lock)
                 temp = game_engine.performAction(action)
-
-                # input_state(temp)
-                # state = read_state()
-                # to_eval_state = state.copy()
-                # print("!!!!! CHECK !!!!!", to_eval_state, "\n VS \n", state)
-                # del to_eval_state['p1']['bullet_hit']
-                # del to_eval_state['p2']['bullet_hit']
-                # input_data(eval_buffer, state_lock, to_eval_state)
-                # print("GHMMMMM...", eval_buffer, "\nVS\n", state)
-                # del to_eval_state
-                # state['p1']['bullet_hit'] = "no"
-                # state['p2']['bullet_hit'] = "no"                  
-                # state_publish(mqtt_p)
-
-                # temp['p1']['action'] = 'none'
-                # input_state(temp)
-                # state_publish(mqtt_p)
-
-
+                # temp should not have bullet hit, data should be ready to send to eval
                 input_state(temp)
-                input_data(eval_buffer, state_lock, temp)
-                # state_lock.acquire()
-                # mqtt_p.publish()
-                # state_lock.release()
-                # state_publish(mqtt_p)
+                input_data(eval_buffer, eval_lock, temp)              
 
-                # temp["p2"]["bullet_hit"]="no"
-                # input_state(temp)
-                # input_data(vis_send_buffer,state_lock, temp)
-                # state_lock.acquire()
-                # mqtt_p.publish()
-                # state_lock.release()
+            if not vis_recv_buffer.empty():
+                # visualizer sends player that is hit by grenade
+                read_data(vis_recv_buffer, vis_recv_lock)
+                # yes1 means that p1 grenade hit p2
+                # !!! this is enough for 1 player game
+                # !!! will need extra checks for 2 player game
+                game_engine.performAction('yes1')
+                # !!! doesn't need to send the grenade hit to eval server
+                # !!! but need to send to visualiser
+
+            if not GUN_buffer.empty():
+                # does the shoot action
+                read_data(GUN_buffer, internal_lock)
+                # !!! this is enough for 1 player game
+                # !!! will need extra checks for 2 player game
+                temp = game_engine.performAction('shoot')
+                # this output is needed by eval server
+                input_state(temp)
+                input_data(eval_buffer, eval_lock, temp)
+
+            if not vest_buffer.empty():
+                read_data(vest_buffer, internal_lock)
+                # bullet1 means that p1 bullet hit p2
+                # !!! this is enough for 1 player game
+                # !!! will need extra checks for 2 player game
+                game_engine.performAction('bullet1')
+                # !!! doesn't need to send the bullet hit to eval server
+                # !!! but need to send to visualiser
 
             state = read_state()
             state["p1"]["shield_time"] = int(state["p1"]["shield_time"])
@@ -263,10 +173,8 @@ class AIDetector(threading.Thread):
                 state["p1"]["shield_time"] -= 1
                 if state["p1"]["shield_time"] == 0:
                     state["p1"]["shield_health"] = 0
-                    input_data(vis_send_buffer,state_lock, temp)
-                    state_lock.acquire()
+                    input_data(vis_send_buffer, vis_send_lock, temp)
                     mqtt_p.publish()
-                    state_lock.release()
 
             if (state["p1"]["shield_time"] > 0):
                 
@@ -288,9 +196,8 @@ class AIDetector(threading.Thread):
             #     # state_publish(mqtt_p)
 
 # for visualizer
-class MQTTClient(threading.Thread):
+class MQTTClient():
     def __init__(self, topic, client_name):
-        super().__init__()
         self.topic = topic
         self.client = mqtt.Client(client_name)
         self.client.connect('test.mosquitto.org')
@@ -298,17 +205,16 @@ class MQTTClient(threading.Thread):
 
     # publish message to topic
     def publish(self):
-        if len(vis_send_buffer):
-            state = read_data(vis_send_buffer, threading.Lock())
+        if not vis_send_buffer.empty():
+            state = read_data(vis_send_buffer, vis_send_lock)
             message = json.dumps(state)
             # publishing message to topic
-            is_sent = self.client.publish(self.topic, message, qos = 1)
+            self.client.publish(self.topic, message, qos = 1)
 
     def receive(self):
         def on_message(client, data, message):
-            input_data(vis_recv_buffer, threading.Lock(), message.payload.decode())
+            input_data(vis_recv_buffer, vis_recv_lock, message.payload.decode())
             print("[MQTT] Received: ", message.payload.decode())
-            print(vis_recv_buffer)
 
         self.client.on_message = on_message
         self.client.subscribe(self.topic)
@@ -397,7 +303,7 @@ class Client(threading.Thread):
                 try:
                     state = read_data(eval_buffer, threading.Lock())
                     
-                    input_data(vis_send_buffer, state_lock, state)
+                    input_data(vis_send_buffer, vis_send_lock, state)
                     mqtt_p.publish()
                     
                     # del state['p1']['bullet_hit']
@@ -463,11 +369,11 @@ class Server(threading.Thread):
                         json_data = json.loads(data[i:j+1])
 
                         if json_data["D"] == "IMU":
-                            input_data(IMU_buffer, state_lock, json_data)
+                            input_data(IMU_buffer, internal_lock, json_data)
                         elif json_data["D"] == "GUN":
-                            input_data(GUN_buffer, state_lock, json_data)
+                            input_data(GUN_buffer, internal_lock, json_data)
                         else:
-                            input_data(vest_buffer, state_lock, json_data)
+                            input_data(vest_buffer, internal_lock, json_data)
                         
                         i = j + 1
 
