@@ -54,7 +54,7 @@ curr_state = {
 AI_buffer = queue.Queue()
 AI_lock = threading.Lock()
 # internal comm buffer
-IMU_buffer = queue.Queue(20)
+IMU_buffer = queue.Queue()
 GUN_buffer = queue.Queue()
 vest_buffer = queue.Queue()
 internal_lock = threading.Lock()
