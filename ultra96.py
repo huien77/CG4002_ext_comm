@@ -309,7 +309,7 @@ class Server(threading.Thread):
     # receive from the laptop client
     def receive(self):
         msg = ''
-        
+
         try:
             data = b''
             while not data.endswith(b'_'):
@@ -340,7 +340,8 @@ class Server(threading.Thread):
 
             msg = data.decode("utf8")
 
-        except ConnectionResetError:
+        except Exception as _:
+            traceback.print_exc()
             self.stop()
         
         return msg
