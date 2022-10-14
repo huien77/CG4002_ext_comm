@@ -278,7 +278,7 @@ class Client(threading.Thread):
                     freshchg = False
                     unrelated_actions = ["logout", "reload"]
                     if state['p1']['action'] == "shield":
-                        if (state['p1']['shield_time'] > 0 and state['p1']['shield_time'] < 10):
+                        if state['p1']['num_shield'] > 0 and (state['p1']['shield_time'] > 0 and state['p1']['shield_time'] <= 10):
                             state['p1']['num_shield'] -= 1
                             state['p1']['shield_time'] = 10
                             freshchg = True
