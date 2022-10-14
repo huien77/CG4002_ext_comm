@@ -298,12 +298,12 @@ class Client(threading.Thread):
                     state['p1']['bullet_hit'] = stored_bh[0]
                     state['p2']['bullet_hit'] = stored_bh[1]
 
-                    if state['p1']['action']=="shoot":
+                    if state['p1']['action'] == "shoot":
                         if state['p1']['bullets'] == 0:
-                            state['p1']['action']="none"
-                    elif state['p1']['action']=="shield":
-                        if state['p1']['num_shield'] == 0 or (state['p1']['shield_time'] > 0) :
-                            state['p1']['action']="none"
+                            state['p1']['action'] = "none"
+                    elif state['p1']['action'] == "shield":
+                        if state['p1']['num_shield'] == 0 or (state['p1']['shield_time'] > 0 and state['p1']['shield'] < 10):
+                            state['p1']['action'] = "none"
                     elif state['p1']['action']=="grenade":
                         if state['p1']['grenades'] == 0:
                             state['p1']['action']="none"
