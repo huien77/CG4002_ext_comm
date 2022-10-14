@@ -117,7 +117,7 @@ class AIDetector(threading.Thread):
         my_client.start()
         
         while action != "logout":
-            while IMU_buffer.full():
+            while not IMU_buffer.empty():
                 data = read_data(IMU_buffer, internal_lock)
                 action = self.predict_action(data["V"])
                 
