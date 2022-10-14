@@ -111,7 +111,7 @@ class AIDetector(threading.Thread):
         except Exception as e:
             print(e)
         
-        while action != "logout":
+        while True:
             while IMU_buffer.qsize() > 0:
                 data = IMU_buffer.get()
                 action = self.predict_action(data["V"])
@@ -160,7 +160,7 @@ class AIDetector(threading.Thread):
                 # !!! but need to send to visualiser
         
         if action == "logout":
-            action = AI_buffer.get_nowait()
+            # action = AI_buffer.get_nowait()
             temp = game_engine.performAction(action)
             # temp should not have bullet hit, data should be ready to send to eval
             input_state(temp)

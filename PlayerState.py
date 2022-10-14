@@ -52,6 +52,12 @@ class Player:
     def grenadeDamage(self):
         self.takeDamage(30)
 
+    def logoutOne(self):
+        self.action = "logout"
+    
+    def logoutTwo(self):
+        self.action = "logout"
+
     def reset(self):
         self.hp = 100
         self.bullets = 6

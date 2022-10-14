@@ -60,6 +60,9 @@ class GameEngine(threading.Thread):
         elif action == Actions.reload:
             self.p1.reload()
 
+        elif action == Actions.logout:
+            self.p1.logoutOne()
+
         # check if player 1' grenade hit player 2
         # elif action == Actions.grenade1:
         #     self.p2.grenadeDamage()
