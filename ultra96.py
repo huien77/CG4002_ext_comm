@@ -293,6 +293,7 @@ class Client(threading.Thread):
                     del state['p2']['bullet_hit']
 
                     freshchg = False
+                    unrelated_actions = ["logout", "reload"]
                     if state['p1']['action'] == "shoot":
                         if state['p1']['bullets'] > 0:
                             state['p1']['bullets'] -= 1
@@ -309,6 +310,9 @@ class Client(threading.Thread):
                             state['p1']['grenades'] -= 1
                             freshchg = True
                             # state['p1']['action'] = "none"
+
+                    elif state['p1']['action'] in unrelated_actions:
+                        freshchg = True
                     
                     self.send_data(state)
 
