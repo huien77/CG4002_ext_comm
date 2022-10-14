@@ -1,4 +1,5 @@
 from argparse import Action
+from asyncio import shield
 from re import M
 import re
 import socket
@@ -329,8 +330,11 @@ class Client(threading.Thread):
                     print("\n\treceived from eval ", expected_state,"\n")
                     expected_state = json.loads(expected_state)
                     input_state(expected_state)
-                    print("Current updated States: ", "Grenads -", curr_state['p1']['grenades'], "\tBullets -", curr_state['p1']['bullets'],"")
-                    print("Watched updated States: ", "Grenads -", expected_state['p1']['grenades'], "\tBullets -", expected_state['p1']['bullets'],"\n\n")
+
+                    ### HARD CODE
+                    if expected_state['p1']['action']=="shield":
+                        if expected_state['p1']['num_shield'] > 0 and not (state['p1']['shield_time'] > 0 and state['p1']['shield_time'] <= 10):
+                            self.end_time = datetime.now()+timedelta(seconds=10)
 
                 # except BrokenPipeError:
                 #     self.socket.connect(self.server_address)
