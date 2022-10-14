@@ -109,6 +109,8 @@ class AIDetector(threading.Thread):
         # DEBUGGING
         action = "none"
         last_detected = "none"
+
+        print("here")
         
         # start game engine
         game_engine = GameEngine(curr_state)
@@ -362,7 +364,6 @@ class Server(threading.Thread):
                 if data["D"] == "IMU":
                     input_data(IMU_buffer, state_lock, data)
                     print(data['V'])
-                    print(IMU_buffer)
                 elif data["D"] == "GUN":
                     input_data(GUN_buffer, state_lock, data)
                 else:
