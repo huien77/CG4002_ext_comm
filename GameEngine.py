@@ -3,6 +3,7 @@ import threading
 import time
 import queue
 import paho.mqtt.client as mqtt
+import copy
 from Actions import Actions
 from PlayerState import Player
 from datetime import datetime
@@ -87,7 +88,12 @@ class GameEngine(threading.Thread):
 
         self.player_state['p1'] = self.p1.__dict__
         self.player_state['p2'] = self.p2.__dict__
-        return self.player_state
+
+        new_state = copy.deepcopy(self.player_state)
+        del new_state['p1']['bullet_hit']
+        del new_state['p2']['bullet_hit']
+
+        return new_state
 
     def run(self):
         # need to decrement the shield timer
