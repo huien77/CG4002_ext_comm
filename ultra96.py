@@ -158,7 +158,13 @@ class AIDetector(threading.Thread):
                 game_engine.performAction('bullet1')
                 # !!! doesn't need to send the bullet hit to eval server
                 # !!! but need to send to visualiser
-            
+        
+        if action == "logout":
+            action = AI_buffer.get_nowait()
+            temp = game_engine.performAction(action)
+            # temp should not have bullet hit, data should be ready to send to eval
+            input_state(temp)
+            eval_buffer.put_nowait(temp)
 
 # for visualizer
 class MQTTClient():
@@ -264,10 +270,11 @@ class Client(threading.Thread):
                 try:
                     state = eval_buffer.get_nowait()
                     
+                    nowShield =state['p1']['action'] == "shield"
                     # need to decrement the shield timer
-                    if (state['p1']['action'] == 'shield'):
+                    if (nowShield):
                         self.start_time = datetime.now()
-                    if (state['p1']['shield_time'] > 0):                        
+                    if (state['p1']['shield_time'] > 0 and not nowShield):                        
                         # if (datetime.now().second == start_time):
                         time_diff = datetime.now() - self.start_time
                         
