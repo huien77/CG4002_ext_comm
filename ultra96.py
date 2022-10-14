@@ -158,6 +158,7 @@ class AIDetector(threading.Thread):
                 game_engine.performAction('bullet1')
                 # !!! doesn't need to send the bullet hit to eval server
                 # !!! but need to send to visualiser
+            
 
 # for visualizer
 class MQTTClient():
@@ -262,6 +263,21 @@ class Client(threading.Thread):
             while eval_buffer.qsize() > 0:
                 try:
                     state = eval_buffer.get_nowait()
+                    
+                    # need to decrement the shield timer
+                    if (state['p1']['action'] == 'shield'):
+                        self.start_time = datetime.now()
+                    if (state['p1']['shield_time'] > 0):                        
+                        # if (datetime.now().second == start_time):
+                        time_diff = datetime.now() - self.start_time
+                        
+                        if time_diff <= 0:
+                            state['p1']['shield_time'] = 0
+                        else:
+                            state['p1']['shield_time'] = int(time_diff.total_seconds())
+                        # vis_send_buffer.put_nowait(self.player_state)
+                        # self.mqtt_p.publish()
+
                     vis_send_buffer.put_nowait(state)
                     mqtt_p.publish()
 

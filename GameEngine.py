@@ -86,18 +86,18 @@ class GameEngine(threading.Thread):
         return self.player_state
 
     # def run(self):
-    #     self.mqtt_p = MQTTClient('visualizer17', 'publish')
-    #     self.mqtt_p.client.loop_start()
+    #     # self.mqtt_p = MQTTClient('visualizer17', 'publish')
+    #     # self.mqtt_p.client.loop_start()
 
-        # need to decrement the shield timer
-        # if (self.p1.shield_time > 0):
-        #     delayed1_time = datetime.now() + timedelta(seconds = 1)
-        #     delayed10_time = datetime.now() + timedelta(seconds = 10)
+    #     need to decrement the shield timer
+    #     if (self.p1.shield_time > 0):
+    #         delayed1_time = datetime.now() + timedelta(seconds = 1)
+    #         delayed10_time = datetime.now() + timedelta(seconds = 10)
             
-        #     if (datetime.now() == delayed1_time):
-        #         self.p1.shield_time -= 1
-        #     if self.p1.shield_time == 0:
-        #         vis_send_buffer.put_nowait(self.player_state)
+    #         if (datetime.now() == delayed1_time):
+    #             self.p1.shield_time -= 1
+    #         if self.p1.shield_time == 0:
+    #             vis_send_buffer.put_nowait(self.player_state)
                 
-        #         if (datetime.now() == delayed10_time): 
-        #             self.mqtt_p.publish()
+    #             if (datetime.now() == delayed10_time): 
+    #                 self.mqtt_p.publish()
