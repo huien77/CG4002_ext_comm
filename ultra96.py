@@ -475,6 +475,7 @@ class Server(threading.Thread):
             try:
                 msg = self.receive()
                 data = json.loads(msg)
+                print(data)
                 input_data(IMU_buffer, state_lock, data)
             except Exception as _:
                 traceback.print_exc()
