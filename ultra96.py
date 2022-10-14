@@ -112,6 +112,7 @@ class AIDetector(threading.Thread):
             print(e)
         
         while action != "logout":
+            game_engine.updateFromEval(curr_state)
             while IMU_buffer.qsize() > 0:
                 data = IMU_buffer.get()
                 action = self.predict_action(data["V"])

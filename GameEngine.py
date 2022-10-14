@@ -41,6 +41,11 @@ class GameEngine(threading.Thread):
         self.p2 = Player(self.player_state['p2'])
         
         print('[Game Engine: STARTED \n\n')
+    
+    def updateFromEval(self, correctedState):
+        self.player_state = correctedState
+        self.p1 = Player(self.player_state['p1'])
+        self.p2 = Player(self.player_state['p2'])
 
     def performAction(self, action):
         print('[Game Engine] Received action: ', action)
