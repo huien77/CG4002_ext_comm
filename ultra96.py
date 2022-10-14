@@ -291,6 +291,7 @@ class Client(threading.Thread):
 
                     del state['p1']['bullet_hit']
                     del state['p2']['bullet_hit']
+                    
                     self.send_data(state)
 
                     ### AFTER SEND DATA LOGIC!!!

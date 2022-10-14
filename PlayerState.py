@@ -10,16 +10,20 @@ class Player:
         self.num_deaths = state['num_deaths']
         self.bullet_hit = 'no'
 
+#NOTE ammo needs fixing
+
     def shoot(self):
         # if self.bullets > 0:
-            self.action = "shoot"
+        self.action = "shoot"
+        if self.bullets > 0:
             self.bullets -= 1
         # else:
         #     self.action = 'none'
 
     def grenade(self):
         # if self.grenades > 0:
-            self.action = "grenade"
+        self.action = "grenade"
+        if self.grenades > 0:
             self.grenades -= 1
         # else:
         #     self.action = 'none'
