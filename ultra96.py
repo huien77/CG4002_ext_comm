@@ -83,6 +83,7 @@ def input_state(data, lock):
 def read_data(buffer, lock):
     lock.acquire()
     data = buffer.get()
+    buffer.task_done()
     lock.release()
     return data
 
