@@ -108,7 +108,6 @@ class AIDetector(threading.Thread):
         while action != "logout":
             while not IMU_buffer.empty():
                 data = IMU_buffer.get()
-                print(data)
                 action = self.predict_action(data["V"])
                 
                 if (action != "idle"):
@@ -348,7 +347,7 @@ class Server(threading.Thread):
                 
                 if data["D"] == "IMU":
                     IMU_buffer.put_nowait(data)
-                    print()
+                    print(IMU_buffer.qsize())
                 elif data["D"] == "GUN":
                     GUN_buffer.put_nowait(data)
                 else:
