@@ -139,7 +139,7 @@ class AIDetector(threading.Thread):
                 # !!! doesn't need to send the grenade hit to eval server
                 # !!! but need to send to visualiser
 
-            if not GUN_buffer.empty():
+            if GUN_buffer.qsize() > 0:
                 # does the shoot action
                 GUN_buffer.get_nowait()
                 # !!! this is enough for 1 player game
@@ -149,7 +149,7 @@ class AIDetector(threading.Thread):
                 input_state(temp)
                 eval_buffer.put_nowait(temp)
 
-            if not vest_buffer.empty():
+            if vest_buffer.qsize() > 0:
                 vest_buffer.get_nowait()
                 # bullet1 means that p1 bullet hit p2
                 # !!! this is enough for 1 player game
