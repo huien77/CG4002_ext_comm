@@ -280,7 +280,7 @@ class Client(threading.Thread):
                     freshchg = False
                     unrelated_actions = ["logout", "reload"]
                     if state['p1']['action'] == "shield":
-                        if state['p1']['num_shield'] > 0 and (state['p1']['shield_time'] > 0 and state['p1']['shield_time'] <= 10):
+                        if state['p1']['num_shield'] > 0 and not (state['p1']['shield_time'] > 0 and state['p1']['shield_time'] <= 10):
                             state['p1']['num_shield'] -= 1
                             state['p1']['shield_time'] = 10
                             freshchg = True
@@ -294,7 +294,7 @@ class Client(threading.Thread):
                             state['p1']['shield_time'] = 0
                             state['p1']['shield_health'] = 0
                         elif time_diff.total_seconds() > 0:
-                            state['p1']['shield_time'] = int(time_diff.total_seconds())
+                            state['p1']['shield_time'] = float(time_diff.total_seconds())
 
                     if state['p1']['action'] == "shoot":
                         if state['p1']['bullets'] > 0:
