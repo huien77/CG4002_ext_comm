@@ -434,7 +434,7 @@ class Server(threading.Thread):
             try:
                 data = self.connection.recv(1024)
                 data = data.decode('utf8')
-                # print("[Ultra96 Server] Received from laptop: ", data)
+                print("[Ultra96 Server] Received from laptop: ", data)
 
                 i = 0
                 j = 0
