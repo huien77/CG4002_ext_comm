@@ -22,7 +22,7 @@ class MQTTClient():
 
     # publish message to topic
     def publish(self):
-        if not vis_send_buffer.empty():
+        if vis_send_buffer.qsize() > 0:
             state = vis_send_buffer.get_nowait()
             message = json.dumps(state)
             # publishing message to topic
