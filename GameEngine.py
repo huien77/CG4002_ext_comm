@@ -43,6 +43,8 @@ class GameEngine(threading.Thread):
         self.mqtt_p = MQTTClient('visualizer17', 'publish')
         self.mqtt_p.client.loop_start()
 
+        print('[Game Engine: STARTED \n\n')
+
     def performAction(self, action):
         print('[Game Engine] Received action: ', action)
 
@@ -77,6 +79,8 @@ class GameEngine(threading.Thread):
 
         self.player_state['p1'] = self.p1.__dict__
         self.player_state['p2'] = self.p2.__dict__
+
+        self.mqtt_p.publish()
 
         new_state = copy.deepcopy(self.player_state)
         del new_state['p1']['bullet_hit']
