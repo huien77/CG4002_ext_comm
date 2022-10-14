@@ -13,18 +13,6 @@ from datetime import timedelta
 vis_send_buffer = queue.Queue()
 vis_send_lock = threading.Lock()
 
-def input_data(buffer, lock, data):
-    lock.acquire()
-    buffer.put_nowait(data)
-    lock.release()
-
-def read_data(buffer, lock):
-    lock.acquire()
-    data = buffer.get()
-    buffer.task_done()
-    lock.release()
-    return data
-
 class MQTTClient():
     def __init__(self, topic, client_name):
         self.topic = topic
@@ -35,7 +23,7 @@ class MQTTClient():
     # publish message to topic
     def publish(self):
         if not vis_send_buffer.empty():
-            state = read_data(vis_send_buffer, vis_send_lock)
+            state = vis_send_buffer.get_nowait()
             message = json.dumps(state)
             # publishing message to topic
             self.client.publish(self.topic, message, qos = 1)
@@ -105,7 +93,7 @@ class GameEngine(threading.Thread):
             if (datetime.now() == delayed1_time):
                 self.p1.shield_time -= 1
             if self.p1.shield_time == 0:
-                input_data(vis_send_buffer, vis_send_lock, self.player_state)
+                vis_send_buffer.put_nowait(self.player_state)
                 
                 if (datetime.now() == delayed10_time): 
                     self.mqtt_p.publish()

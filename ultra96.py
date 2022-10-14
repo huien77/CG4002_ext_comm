@@ -80,18 +80,6 @@ def input_state(data, lock):
     curr_state = data
     lock.release()
 
-def read_data(buffer, lock):
-    lock.acquire()
-    data = buffer.get()
-    buffer.task_done()
-    lock.release()
-    return data
-
-def input_data(buffer, lock, data):
-    lock.acquire()
-    buffer.put_nowait(data)
-    lock.release()
-
 # for AI
 class AIDetector(threading.Thread):
     def __init__(self):
@@ -119,27 +107,28 @@ class AIDetector(threading.Thread):
         
         while action != "logout":
             while not IMU_buffer.empty():
-                data = read_data(IMU_buffer, internal_lock)
+                data = IMU_buffer.get_nowait()
+                print(data)
                 action = self.predict_action(data["V"])
                 
                 if (action != "idle"):
                     print("Predicted:\t", action, "\t\tPrev_detect:", last_detected)
                     last_detected = action
-                    input_data(AI_buffer, AI_lock, action)
+                    AI_buffer.put_nowait(action)
 
             if not AI_buffer.empty():
                 # action in AI_buffer should not be idle
                 # !!! for now all the actions are done by player 1
                 # !!! for 2 player game, need extra logic to check the action for p1 or p2
-                action = read_data(AI_buffer, AI_lock)
+                action = AI_buffer.get_nowait
                 temp = game_engine.performAction(action)
                 # temp should not have bullet hit, data should be ready to send to eval
                 input_state(temp)
-                input_data(eval_buffer, eval_lock, temp)              
+                eval_buffer.put_nowait(temp)
 
             if not vis_recv_buffer.empty():
                 # visualizer sends player that is hit by grenade
-                read_data(vis_recv_buffer, vis_recv_lock)
+                vis_recv_buffer.get_nowait()
                 # yes1 means that p1 grenade hit p2
                 # !!! this is enough for 1 player game
                 # !!! will need extra checks for 2 player game
@@ -149,16 +138,16 @@ class AIDetector(threading.Thread):
 
             if not GUN_buffer.empty():
                 # does the shoot action
-                read_data(GUN_buffer, internal_lock)
+                GUN_buffer.get_nowait()
                 # !!! this is enough for 1 player game
                 # !!! will need extra checks for 2 player game
                 temp = game_engine.performAction('shoot')
                 # this output is needed by eval server
                 input_state(temp)
-                input_data(eval_buffer, eval_lock, temp)
+                eval_buffer.put_nowait(temp)
 
             if not vest_buffer.empty():
-                read_data(vest_buffer, internal_lock)
+                vest_buffer.get_nowait()
                 # bullet1 means that p1 bullet hit p2
                 # !!! this is enough for 1 player game
                 # !!! will need extra checks for 2 player game
@@ -177,14 +166,14 @@ class MQTTClient():
     # publish message to topic
     def publish(self):
         if not vis_send_buffer.empty():
-            state = read_data(vis_send_buffer, vis_send_lock)
+            state = vis_send_buffer.get_nowait()
             message = json.dumps(state)
             # publishing message to topic
             self.client.publish(self.topic, message, qos = 1)
 
     def receive(self):
         def on_message(client, data, message):
-            input_data(vis_recv_buffer, vis_recv_lock, message.payload.decode())
+            vis_recv_buffer.put_nowait(message.payload.decode())
             print("[MQTT] Received: ", message.payload.decode())
 
         self.client.on_message = on_message
@@ -268,7 +257,7 @@ class Client(threading.Thread):
         while True:
             while not eval_buffer.empty():
                 try:
-                    state = read_data(eval_buffer, eval_lock)
+                    state = eval_buffer.get_nowait()
                     self.send_data(state)
                     # receive expected state from eval server
                     expected_state = self.receive()
@@ -358,11 +347,12 @@ class Server(threading.Thread):
                 data = json.loads(msg)
                 
                 if data["D"] == "IMU":
-                    input_data(IMU_buffer, internal_lock, data)
+                    IMU_buffer.put_nowait(data)
+                    print()
                 elif data["D"] == "GUN":
-                    input_data(GUN_buffer, internal_lock, data)
+                    GUN_buffer.put_nowait(data)
                 else:
-                    input_data(vest_buffer, internal_lock, data)
+                    vest_buffer.put_nowait(data)
                 
             except Exception as _:
                 traceback.print_exc()
