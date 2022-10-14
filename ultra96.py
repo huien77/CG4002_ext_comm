@@ -110,14 +110,16 @@ class AIDetector(threading.Thread):
         action = "none"
         last_detected = "none"
 
-        print("here")
+        print("YOU GOT ME THOUGH...")
         
         # start game engine
         game_engine = GameEngine(curr_state)
+        print("whaup")
         game_engine.start()
 
         # start ultra96 client to eval server thread
         my_client = Client(ip_addr, port_num, group_id, secret_key)
+        print("whadup!!!")
         my_client.start()
         
         while action != "logout":
@@ -354,13 +356,14 @@ class Server(threading.Thread):
     def run(self):
         self.setup_connection()
         AI_detector = AIDetector()
+        print("FIND HIMMM!!...")
         AI_detector.start()
-
+        print("CHECK ----- 0")
         while True:
             try:
                 msg = self.receive()
                 data = json.loads(msg)
-                
+                print("CHECK --------- 1")
                 if data["D"] == "IMU":
                     input_data(IMU_buffer, state_lock, data)
                     print(data['V'])
