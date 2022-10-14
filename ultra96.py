@@ -258,7 +258,7 @@ class Client(threading.Thread):
 
     def run(self):
         while True:
-            while not eval_buffer.empty():
+            while eval_buffer.qsize() > 0:
                 try:
                     state = eval_buffer.get_nowait()
                     self.send_data(state)
