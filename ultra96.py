@@ -128,7 +128,7 @@ class AIDetector(threading.Thread):
             print(e)
         print("MOVING ON...")
         while action != "logout":
-            print("!!!!!!!!!!!!!!", len(IMU_buffer))
+            # print("!!!!!!!!!!!!!!", len(IMU_buffer))
             while len(IMU_buffer):
                 data = read_data(IMU_buffer, state_lock)
                 action = self.predict_action(data["V"])
