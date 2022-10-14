@@ -111,11 +111,9 @@ class AIDetector(threading.Thread):
             print(e)
         
         while action != "logout":
-            print(IMU_buffer.qsize())
             while IMU_buffer.qsize() > 0:
                 data = IMU_buffer.get()
                 action = self.predict_action(data["V"])
-                print(data)
                 if (action != "idle"):
                     print("Predicted:\t", action, "\t\tPrev_detect:", last_detected)
                     last_detected = action
