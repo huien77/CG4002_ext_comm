@@ -50,10 +50,15 @@ class GameEngine(threading.Thread):
     def performAction(self, action):
         print('[Game Engine] Received action: ', action)
 
+        # Version 0: Assume DEFINITE HITS
         if action == Actions.shoot:
             self.p1.shoot()
             self.p2.bulletDamage()
             self.p1.bullet_hit = 'yes'
+
+        if action == Actions.vest2:
+            self.p2.bulletDamage()
+            self.p1.bullet_hit='yes'
 
         elif action == Actions.shield:
             self.p1.shield()

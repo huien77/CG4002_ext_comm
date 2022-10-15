@@ -113,7 +113,10 @@ class AIDetector(threading.Thread):
             print(e)
         
         while action != "logout":
+            # Update local game state from eval_server
             game_engine.updateFromEval(curr_state)
+
+            # Read buffers and perform actions
             while IMU_buffer.qsize() > 0:
                 data = IMU_buffer.get()
                 action = self.predict_action(data["V"])
@@ -148,18 +151,20 @@ class AIDetector(threading.Thread):
                 # !!! this is enough for 1 player game
                 # !!! will need extra checks for 2 player game
                 temp = game_engine.performAction('shoot')
+                
+                # Check bullet hit
+                if vest_buffer.qsize() > 0:
+                    vest_buffer.get_nowait()
+                    # bullet1 means that p1 bullet hit p2
+                    # !!! this is enough for 1 player game
+                    # !!! will need extra checks for 2 player game
+                    game_engine.performAction('bullet1')
+                    # !!! doesn't need to send the bullet hit to eval server
+                    # !!! but need to send to visualiser
+                
                 # this output is needed by eval server
                 input_state(temp)
                 eval_buffer.put_nowait(temp)
-
-            if vest_buffer.qsize() > 0:
-                vest_buffer.get_nowait()
-                # bullet1 means that p1 bullet hit p2
-                # !!! this is enough for 1 player game
-                # !!! will need extra checks for 2 player game
-                game_engine.performAction('bullet1')
-                # !!! doesn't need to send the bullet hit to eval server
-                # !!! but need to send to visualiser
         
         # if action == "logout":
         #     # action = AI_buffer.get_nowait()
@@ -272,8 +277,8 @@ class Client(threading.Thread):
             while eval_buffer.qsize() > 0:
                 try:
                     state = eval_buffer.get_nowait()
-
-                    stored_bh = [state['p1']['bullet_hit'],state['p2']['bullet_hit']]
+                    # stored_bh = [state['p1']['bullet_hit'],state['p2']['bullet_hit']]
+                    stored_bh = [state.get('p1').get('bullet_hit'),state.get('p2').get('bullet_hit')]
 
                     del state['p1']['bullet_hit']
                     del state['p2']['bullet_hit']
