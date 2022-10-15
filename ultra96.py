@@ -105,12 +105,12 @@ class AIDetector(threading.Thread):
         game_engine = GameEngine(curr_state)
         game_engine.start()
 
-        try:
+        # try:
         # start ultra96 client to eval server thread
-            my_client = Client(ip_addr, port_num, group_id, secret_key)
-            my_client.start()
-        except Exception as e:
-            print(e)
+        my_client = Client(ip_addr, port_num, group_id, secret_key)
+        my_client.start()
+        # except Exception as e:
+        #     print(e)
         
         while action != "logout":
             # Update local game state from eval_server
@@ -213,9 +213,12 @@ class Client(threading.Thread):
         self.secret_key = secret_key
         self.group_id = group_id
         # start connection
-        self.socket.connect(self.server_address)
-        
-        print("[Evaluation Client] Connected: ", self.server_address)
+        try:
+            self.socket.connect(self.server_address)
+            
+            print("[Evaluation Client] Connected: ", self.server_address)
+        except Exception as e:
+            print(e)
 
     def encrypt_message(self, message):
         # convert to a json string
@@ -316,7 +319,7 @@ class Client(threading.Thread):
                     elif state['p1']['action'] in unrelated_actions:
                         freshchg = True
                     
-                    self.send_data(state)
+                    # self.send_data(state)
 
                     if not freshchg:
                         state['p1']['action'] = "none"
@@ -345,7 +348,7 @@ class Client(threading.Thread):
                         if expected_state['p1']['num_shield'] > 0 and not (state['p1']['shield_time'] > 0 and state['p1']['shield_time'] <= 10):
                             self.end_time = datetime.now()+timedelta(seconds=10)
                     """
-                    
+
                 # except BrokenPipeError:
                 #     self.socket.connect(self.server_address)
                 except Exception as e:
