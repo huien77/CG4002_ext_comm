@@ -277,7 +277,8 @@ class Client(threading.Thread):
             while eval_buffer.qsize() > 0:
                 try:
                     state = eval_buffer.get_nowait()
-                    # stored_bh = [state['p1']['bullet_hit'],state['p2']['bullet_hit']]
+
+                    print("SHOTS? ", state.get('p1').get('bullet_hit'))
                     stored_bh = [state.get('p1').get('bullet_hit'),state.get('p2').get('bullet_hit')]
 
                     del state['p1']['bullet_hit']
@@ -317,12 +318,14 @@ class Client(threading.Thread):
                     
                     self.send_data(state)
 
-                    ### AFTER SEND DATA LOGIC!!!
-                    state['p1']['bullet_hit'] = stored_bh[0]
-                    state['p2']['bullet_hit'] = stored_bh[1]
-
                     if not freshchg:
                         state['p1']['action'] = "none"
+                        state['p1']['bullet_hit'] = 'no'
+                        state['p2']['bullet_hit'] = 'no'
+                    else:
+                        ### AFTER SEND DATA LOGIC!!!
+                        state['p1']['bullet_hit'] = stored_bh[0]
+                        state['p2']['bullet_hit'] = stored_bh[1]
 
                     vis_send_buffer.put_nowait(state)
                     mqtt_p.publish()
@@ -330,6 +333,7 @@ class Client(threading.Thread):
                     state['p1']['bullet_hit'] = "no"
                     state['p2']['bullet_hit'] = "no"
 
+                    """
                     # receive expected state from eval server
                     expected_state = self.receive()
                     print("\n\treceived from eval ", expected_state,"\n")
@@ -340,7 +344,8 @@ class Client(threading.Thread):
                     if expected_state['p1']['action']=="shield":
                         if expected_state['p1']['num_shield'] > 0 and not (state['p1']['shield_time'] > 0 and state['p1']['shield_time'] <= 10):
                             self.end_time = datetime.now()+timedelta(seconds=10)
-
+                    """
+                    
                 # except BrokenPipeError:
                 #     self.socket.connect(self.server_address)
                 except Exception as e:

@@ -53,8 +53,9 @@ class GameEngine(threading.Thread):
         # Version 0: Assume DEFINITE HITS
         if action == Actions.shoot:
             self.p1.shoot()
-            self.p2.bulletDamage()
-            self.p1.bullet_hit = 'yes'
+            self.p1.bullet_hit='no'
+            # self.p2.bulletDamage()
+            # self.p1.bullet_hit = 'yes'
 
         if action == Actions.vest2:
             self.p2.bulletDamage()
