@@ -105,12 +105,9 @@ class AIDetector(threading.Thread):
         game_engine = GameEngine(curr_state)
         game_engine.start()
 
-        try:
         # start ultra96 client to eval server thread
-            my_client = Client(ip_addr, port_num, group_id, secret_key)
-            my_client.start()
-        except Exception as e:
-            print(e)
+        my_client = Client(ip_addr, port_num, group_id, secret_key)
+        my_client.start()
         
         while action != "logout":
             game_engine.updateFromEval(curr_state)
@@ -207,10 +204,16 @@ class Client(threading.Thread):
         self.server_address = (ip_addr, port_num)
         self.secret_key = secret_key
         self.group_id = group_id
-        # start connection
-        self.socket.connect(self.server_address)
+        try:
+            # start connection
+            self.socket.connect(self.server_address)
+            self.accepted = True
+            print("[Evaluation Client] Connected: ", self.server_address)
+        except Exception as e:
+            self.accepted = False
+            print("[Evaluation Client] Error: ", e)
+            print("[Evaluation Client] Skipped")
         
-        print("[Evaluation Client] Connected: ", self.server_address)
 
     def encrypt_message(self, message):
         # convert to a json string
@@ -310,7 +313,8 @@ class Client(threading.Thread):
                     elif state['p1']['action'] in unrelated_actions:
                         freshchg = True
                     
-                    self.send_data(state)
+                    if self.accepted:
+                        self.send_data(state)
 
                     ### AFTER SEND DATA LOGIC!!!
                     state['p1']['bullet_hit'] = stored_bh[0]
@@ -325,16 +329,17 @@ class Client(threading.Thread):
                     state['p1']['bullet_hit'] = "no"
                     state['p2']['bullet_hit'] = "no"
 
-                    # receive expected state from eval server
-                    expected_state = self.receive()
-                    print("\n\treceived from eval ", expected_state,"\n")
-                    expected_state = json.loads(expected_state)
-                    input_state(expected_state)
+                    if self.accepted:
+                        # receive expected state from eval server
+                        expected_state = self.receive()
+                        print("\n\treceived from eval ", expected_state,"\n")
+                        expected_state = json.loads(expected_state)
+                        input_state(expected_state)
 
-                    ### HARD CODE
-                    if expected_state['p1']['action']=="shield":
-                        if expected_state['p1']['num_shield'] > 0 and not (state['p1']['shield_time'] > 0 and state['p1']['shield_time'] <= 10):
-                            self.end_time = datetime.now()+timedelta(seconds=10)
+                        ### HARD CODE
+                        if expected_state['p1']['action']=="shield":
+                            if expected_state['p1']['num_shield'] > 0 and not (state['p1']['shield_time'] > 0 and state['p1']['shield_time'] <= 10):
+                                self.end_time = datetime.now()+timedelta(seconds=10)
 
                 # except BrokenPipeError:
                 #     self.socket.connect(self.server_address)
