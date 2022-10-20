@@ -117,15 +117,20 @@ class AIDetector(threading.Thread):
                 if (action != "idle"):
                     print("Predicted:\t", action, "\t\tPrev_detect:", last_detected)
                     last_detected = action
+                    # changes
+                    player_num = data["P"]
                     AI_buffer.put_nowait(action)
+                    AI_buffer.put_nowait(player_num)
 
             if AI_buffer.qsize() > 0:
                 # action in AI_buffer should not be idle
                 # !!! for now all the actions are done by player 1
                 # !!! for 2 player game, need extra logic to check the action for p1 or p2
+
+                # changes
                 action = AI_buffer.get_nowait()
-                temp = game_engine.performAction(action)
-                # temp should not have bullet hit, data should be ready to send to eval
+                player_num = AI_buffer.get_nowait()
+                temp = game_engine.performAction(action, player_num)
                 input_state(temp)
                 eval_buffer.put_nowait(temp)
 

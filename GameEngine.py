@@ -46,26 +46,44 @@ class GameEngine(threading.Thread):
         self.p1 = Player(self.player_state['p1'])
         self.p2 = Player(self.player_state['p2'])
 
-    def performAction(self, action):
+    def performAction(self, action, player_num):
         print('[Game Engine] Received action: ', action)
 
         if action == Actions.shoot:
-            self.p1.shoot()
-            self.p2.bulletDamage()
-            self.p1.bullet_hit = 'yes'
+            if player_num == 1:
+                self.p1.shoot()
+                self.p2.bulletDamage()
+                self.p1.bullet_hit = 'yes'
+            else:
+                self.p2.shoot()
+                self.p1.bulletDamage()
+                self.p2.bullet_hit = 'yes'
 
         elif action == Actions.shield:
-            self.p1.shield()
+            if player_num == 1:
+                self.p1.shield()
+            else:
+                self.p2.shield()
 
         elif action == Actions.grenade:
-            self.p1.grenade()
-            self.p2.grenadeDamage()
+            if player_num == 1:
+                self.p1.grenade()
+                self.p2.grenadeDamage()
+            else:
+                self.p2.grenade()
+                self.p1.grenadeDamage()
 
         elif action == Actions.reload:
-            self.p1.reload()
+            if player_num == 1:
+                self.p1.reload()
+            else:
+                self.p2.reload()
 
         elif action == Actions.logout:
-            self.p1.logoutOne()
+            if player_num == 1:
+                self.p1.logoutOne()
+            else:
+                self.p2.logoutTwo()
 
         # check if player 1' grenade hit player 2
         # elif action == Actions.grenade1:
