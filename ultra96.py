@@ -105,12 +105,9 @@ class AIDetector(threading.Thread):
         game_engine = GameEngine(curr_state)
         game_engine.start()
 
-        # try:
         # start ultra96 client to eval server thread
         my_client = Client(ip_addr, port_num, group_id, secret_key)
         my_client.start()
-        # except Exception as e:
-        #     print(e)
         
         while action != "logout":
             # Update local game state from eval_server
@@ -215,9 +212,11 @@ class Client(threading.Thread):
         # start connection
         try:
             self.socket.connect(self.server_address)
+            self.connectedToEval = True
             
             print("[Evaluation Client] Connected: ", self.server_address)
         except Exception as e:
+            self.connectedToEval = False
             print(e)
 
     def encrypt_message(self, message):
@@ -281,73 +280,21 @@ class Client(threading.Thread):
                 try:
                     state = eval_buffer.get_nowait()
 
-                    print("SHOTS? ", state.get('p1').get('bullet_hit'))
-                    stored_bh = [state.get('p1').get('bullet_hit'),state.get('p2').get('bullet_hit')]
-
-                    del state['p1']['bullet_hit']
-                    del state['p2']['bullet_hit']
-
-                    freshchg = False
-                    unrelated_actions = ["logout", "reload"]
-                    if state['p1']['action'] == "shield":
-                        if state['p1']['num_shield'] > 0 and not (state['p1']['shield_time'] > 0 and state['p1']['shield_time'] <= 10):
-                            state['p1']['num_shield'] -= 1
-                            state['p1']['shield_time'] = 10
-                            freshchg = True
-                            self.end_time = datetime.now()+timedelta(seconds=10)
-                            # state['p1']['action'] = "none"
-                    elif (state['p1']['shield_time'] > 0):                        
-                        # if (datetime.now().second == start_time):
-                        time_diff = self.end_time - datetime.now()
-                        if time_diff.total_seconds() <= 0:
-                            state['p1']['shield_time'] = 0
-                            state['p1']['shield_health'] = 0
-                        elif time_diff.total_seconds() > 0:
-                            state['p1']['shield_time'] = float(time_diff.total_seconds())
-
-                    if state['p1']['action'] == "shoot":
-                        if state['p1']['bullets'] > 0:
-                            state['p1']['bullets'] -= 1
-                            freshchg = True
-                            # state['p1']['action'] = "none"
-                    elif state['p1']['action'] == "grenade":
-                        if state['p1']['grenades'] > 0:
-                            state['p1']['grenades'] -= 1
-                            freshchg = True
-                            # state['p1']['action'] = "none"
-
-                    elif state['p1']['action'] in unrelated_actions:
-                        freshchg = True
-                    
-                    # self.send_data(state)
-
-                    if not freshchg:
-                        state['p1']['action'] = "none"
-                        state['p1']['bullet_hit'] = 'no'
-                        state['p2']['bullet_hit'] = 'no'
-                    else:
-                        ### AFTER SEND DATA LOGIC!!!
-                        state['p1']['bullet_hit'] = stored_bh[0]
-                        state['p2']['bullet_hit'] = stored_bh[1]
+                    state = game_engine.runLogic(state)
 
                     vis_send_buffer.put_nowait(state)
                     mqtt_p.publish()
 
-                    state['p1']['bullet_hit'] = "no"
-                    state['p2']['bullet_hit'] = "no"
+                    state = game_engine.resetValues()
 
-                    """
                     # receive expected state from eval server
-                    expected_state = self.receive()
-                    print("\n\treceived from eval ", expected_state,"\n")
-                    expected_state = json.loads(expected_state)
-                    input_state(expected_state)
-
-                    ### HARD CODE
-                    if expected_state['p1']['action']=="shield":
-                        if expected_state['p1']['num_shield'] > 0 and not (state['p1']['shield_time'] > 0 and state['p1']['shield_time'] <= 10):
-                            self.end_time = datetime.now()+timedelta(seconds=10)
-                    """
+                    if connectedToEval:
+                        expected_state = self.receive()
+                        print("\n\treceived from eval\n", expected_state,"\n")
+                        expected_state = json.loads(expected_state)
+                        
+                        setShieldTimer(expected_state)
+                        input_state(expected_state)
 
                 # except BrokenPipeError:
                 #     self.socket.connect(self.server_address)
