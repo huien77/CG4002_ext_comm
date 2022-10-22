@@ -138,24 +138,23 @@ class GameEngine(threading.Thread):
 
         elif state['p1']['action'] in unrelated_actions:
             freshchg = True
-        
-        if self.accepted:
-            self.send_data(state)
 
-        ### AFTER SEND DATA LOGIC!!!
-        state['p1']['bullet_hit'] = stored_bh[0]
-        state['p2']['bullet_hit'] = stored_bh[1]
-
-        if not freshchg:
-            state['p1']['action'] = "none"
-
-        return state
+        return state, freshchg, stored_bh
 
     def checkShieldTimer(self, expected_state):
         if expected_state['p1']['action']=="shield":
             if expected_state['p1']['num_shield'] > 0 and not (state['p1']['shield_time'] > 0 and state['p1']['shield_time'] <= 10):
                 self.end_time = datetime.now()+timedelta(seconds=10)
 
+    def restoreValues(self, state, freshchg, stored_bh):
+        ### AFTER SEND DATA LOGIC!!!
+        state['p1']['bullet_hit'] = stored_bh[0]
+        state['p2']['bullet_hit'] = stored_bh[1]
+
+        if not freshchg:
+            state['p1']['action'] = "none"
+        return state
+    
     def resetValues(self, state):
         state['p1']['bullet_hit'] = "no"
         state['p2']['bullet_hit'] = "no"

@@ -279,12 +279,15 @@ class Client(threading.Thread):
                 try:
                     state = eval_buffer.get_nowait()
 
-                    state = game_engine.runLogic(state)
+                    state, freshchg, stored_bh = game_engine.runLogic(state)
+                    if self.accepted:
+                        self.send_data(state)
 
+                    state = game_engine.restoreValues(state, freshchg, stored_bh)
                     vis_send_buffer.put_nowait(state)
                     mqtt_p.publish()
 
-                    state = game_engine.resetValues()
+                    state = game_engine.resetValues(state)
 
                     if self.accepted:
                         # receive expected state from eval server
@@ -294,8 +297,6 @@ class Client(threading.Thread):
                         setShieldTimer(expected_state)
                         input_state(expected_state)
 
-                # except BrokenPipeError:
-                #     self.socket.connect(self.server_address)
                 except Exception as e:
                     print(e)
             
