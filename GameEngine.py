@@ -139,16 +139,15 @@ class GameEngine(threading.Thread):
         elif state['p1']['action'] in unrelated_actions:
             freshchg = True
         
-        # self.send_data(state)
+        if self.accepted:
+            self.send_data(state)
+
+        ### AFTER SEND DATA LOGIC!!!
+        state['p1']['bullet_hit'] = stored_bh[0]
+        state['p2']['bullet_hit'] = stored_bh[1]
 
         if not freshchg:
             state['p1']['action'] = "none"
-            state['p1']['bullet_hit'] = 'no'
-            state['p2']['bullet_hit'] = 'no'
-        else:
-            ### AFTER SEND DATA LOGIC!!!
-            state['p1']['bullet_hit'] = stored_bh[0]
-            state['p2']['bullet_hit'] = stored_bh[1]
 
         return state
 
