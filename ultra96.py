@@ -110,7 +110,10 @@ class AIDetector(threading.Thread):
         my_client.start()
         
         while action != "logout":
+            # Update local game state from eval_server
             game_engine.updateFromEval(curr_state)
+
+            # Read buffers and perform actions
             while IMU_buffer.qsize() > 0:
                 data = IMU_buffer.get()
                 action = self.predict_action(data["V"])
@@ -145,18 +148,20 @@ class AIDetector(threading.Thread):
                 # !!! this is enough for 1 player game
                 # !!! will need extra checks for 2 player game
                 temp = game_engine.performAction('shoot')
+                
+                # Check bullet hit
+                if vest_buffer.qsize() > 0:
+                    vest_buffer.get_nowait()
+                    # bullet1 means that p1 bullet hit p2
+                    # !!! this is enough for 1 player game
+                    # !!! will need extra checks for 2 player game
+                    game_engine.performAction('bullet1')
+                    # !!! doesn't need to send the bullet hit to eval server
+                    # !!! but need to send to visualiser
+                
                 # this output is needed by eval server
                 input_state(temp)
                 eval_buffer.put_nowait(temp)
-
-            if vest_buffer.qsize() > 0:
-                vest_buffer.get_nowait()
-                # bullet1 means that p1 bullet hit p2
-                # !!! this is enough for 1 player game
-                # !!! will need extra checks for 2 player game
-                game_engine.performAction('bullet1')
-                # !!! doesn't need to send the bullet hit to eval server
-                # !!! but need to send to visualiser
         
         # if action == "logout":
         #     # action = AI_buffer.get_nowait()
@@ -196,7 +201,6 @@ class MQTTClient():
 
 # eval_client
 class Client(threading.Thread):
-    end_time = datetime.now()
     def __init__(self, ip_addr, port_num, group_id, secret_key):
         super().__init__()
         # set up a TCP/IP socket to the port number
@@ -213,7 +217,6 @@ class Client(threading.Thread):
             self.accepted = False
             print("[Evaluation Client] Error: ", e)
             print("[Evaluation Client] Skipped")
-        
 
     def encrypt_message(self, message):
         # convert to a json string
@@ -276,70 +279,20 @@ class Client(threading.Thread):
                 try:
                     state = eval_buffer.get_nowait()
 
-                    stored_bh = [state['p1']['bullet_hit'],state['p2']['bullet_hit']]
-
-                    del state['p1']['bullet_hit']
-                    del state['p2']['bullet_hit']
-
-                    freshchg = False
-                    unrelated_actions = ["logout", "reload"]
-                    if state['p1']['action'] == "shield":
-                        if state['p1']['num_shield'] > 0 and not (state['p1']['shield_time'] > 0 and state['p1']['shield_time'] <= 10):
-                            state['p1']['num_shield'] -= 1
-                            state['p1']['shield_time'] = 10
-                            freshchg = True
-                            self.end_time = datetime.now()+timedelta(seconds=10)
-                            # state['p1']['action'] = "none"
-                    elif (state['p1']['shield_time'] > 0):                        
-                        # if (datetime.now().second == start_time):
-                        time_diff = self.end_time - datetime.now()
-                        if time_diff.total_seconds() <= 0:
-                            state['p1']['shield_time'] = 0
-                            state['p1']['shield_health'] = 0
-                        elif time_diff.total_seconds() > 0:
-                            state['p1']['shield_time'] = float(time_diff.total_seconds())
-
-                    if state['p1']['action'] == "shoot":
-                        if state['p1']['bullets'] > 0:
-                            state['p1']['bullets'] -= 1
-                            freshchg = True
-                            # state['p1']['action'] = "none"
-                    elif state['p1']['action'] == "grenade":
-                        if state['p1']['grenades'] > 0:
-                            state['p1']['grenades'] -= 1
-                            freshchg = True
-                            # state['p1']['action'] = "none"
-
-                    elif state['p1']['action'] in unrelated_actions:
-                        freshchg = True
-                    
-                    if self.accepted:
-                        self.send_data(state)
-
-                    ### AFTER SEND DATA LOGIC!!!
-                    state['p1']['bullet_hit'] = stored_bh[0]
-                    state['p2']['bullet_hit'] = stored_bh[1]
-
-                    if not freshchg:
-                        state['p1']['action'] = "none"
+                    state = game_engine.runLogic(state)
 
                     vis_send_buffer.put_nowait(state)
                     mqtt_p.publish()
 
-                    state['p1']['bullet_hit'] = "no"
-                    state['p2']['bullet_hit'] = "no"
+                    state = game_engine.resetValues()
 
                     if self.accepted:
                         # receive expected state from eval server
                         expected_state = self.receive()
-                        print("\n\treceived from eval ", expected_state,"\n")
+                        print("\n\treceived from eval:\n", expected_state,"\n")
                         expected_state = json.loads(expected_state)
+                        setShieldTimer(expected_state)
                         input_state(expected_state)
-
-                        ### HARD CODE
-                        if expected_state['p1']['action']=="shield":
-                            if expected_state['p1']['num_shield'] > 0 and not (state['p1']['shield_time'] > 0 and state['p1']['shield_time'] <= 10):
-                                self.end_time = datetime.now()+timedelta(seconds=10)
 
                 # except BrokenPipeError:
                 #     self.socket.connect(self.server_address)

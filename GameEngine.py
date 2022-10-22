@@ -8,9 +8,9 @@ from PlayerState import Player
 from datetime import datetime
 from datetime import timedelta
 
-# send to visualizer buffer
-vis_send_buffer = queue.Queue()
-vis_send_lock = threading.Lock()
+# # send to visualizer buffer
+# vis_send_buffer = queue.Queue()
+# vis_send_lock = threading.Lock()
 
 # class MQTTClient():
 #     def __init__(self, topic, client_name):
@@ -38,6 +38,8 @@ class GameEngine(threading.Thread):
         self.player_state = player_state
         self.p1 = Player(self.player_state['p1'])
         self.p2 = Player(self.player_state['p2'])
+
+        self.end_time = datetime.now()
         
         print('[Game Engine: STARTED \n\n')
     
@@ -49,10 +51,16 @@ class GameEngine(threading.Thread):
     def performAction(self, action):
         print('[Game Engine] Received action: ', action)
 
+        # Version 0: Assume DEFINITE HITS
         if action == Actions.shoot:
             self.p1.shoot()
+            self.p1.bullet_hit='no'
+            # self.p2.bulletDamage()
+            # self.p1.bullet_hit = 'yes'
+
+        if action == Actions.vest2:
             self.p2.bulletDamage()
-            self.p1.bullet_hit = 'yes'
+            self.p1.bullet_hit='yes'
 
         elif action == Actions.shield:
             self.p1.shield()
@@ -91,6 +99,68 @@ class GameEngine(threading.Thread):
         # del new_state['p2']['bullet_hit']
 
         return self.player_state
+    
+    def runLogic(self, state):
+        print("SHOTS? ", state.get('p1').get('bullet_hit'))
+        stored_bh = [state.get('p1').get('bullet_hit'),state.get('p2').get('bullet_hit')]
+
+        del state['p1']['bullet_hit']
+        del state['p2']['bullet_hit']
+
+        freshchg = False
+        unrelated_actions = ["logout", "reload"]
+        if state['p1']['action'] == "shield":
+            if state['p1']['num_shield'] > 0 and not (state['p1']['shield_time'] > 0 and state['p1']['shield_time'] <= 10):
+                state['p1']['num_shield'] -= 1
+                state['p1']['shield_time'] = 10
+                freshchg = True
+                self.end_time = datetime.now()+timedelta(seconds=10)
+                # state['p1']['action'] = "none"
+        elif (state['p1']['shield_time'] > 0):                        
+            # if (datetime.now().second == start_time):
+            time_diff = self.end_time - datetime.now()
+            if time_diff.total_seconds() <= 0:
+                state['p1']['shield_time'] = 0
+                state['p1']['shield_health'] = 0
+            elif time_diff.total_seconds() > 0:
+                state['p1']['shield_time'] = float(time_diff.total_seconds())
+
+        if state['p1']['action'] == "shoot":
+            if state['p1']['bullets'] > 0:
+                state['p1']['bullets'] -= 1
+                freshchg = True
+                # state['p1']['action'] = "none"
+        elif state['p1']['action'] == "grenade":
+            if state['p1']['grenades'] > 0:
+                state['p1']['grenades'] -= 1
+                freshchg = True
+                # state['p1']['action'] = "none"
+
+        elif state['p1']['action'] in unrelated_actions:
+            freshchg = True
+        
+        # self.send_data(state)
+
+        if not freshchg:
+            state['p1']['action'] = "none"
+            state['p1']['bullet_hit'] = 'no'
+            state['p2']['bullet_hit'] = 'no'
+        else:
+            ### AFTER SEND DATA LOGIC!!!
+            state['p1']['bullet_hit'] = stored_bh[0]
+            state['p2']['bullet_hit'] = stored_bh[1]
+
+        return state
+
+    def checkShieldTimer(self, expected_state):
+        if expected_state['p1']['action']=="shield":
+            if expected_state['p1']['num_shield'] > 0 and not (state['p1']['shield_time'] > 0 and state['p1']['shield_time'] <= 10):
+                self.end_time = datetime.now()+timedelta(seconds=10)
+
+    def resetValues(self, state):
+        state['p1']['bullet_hit'] = "no"
+        state['p2']['bullet_hit'] = "no"
+        return state
 
     # def run(self):
     #     # self.mqtt_p = MQTTClient('visualizer17', 'publish')
