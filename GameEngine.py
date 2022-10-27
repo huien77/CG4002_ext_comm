@@ -8,30 +8,6 @@ from PlayerState import Player
 from datetime import datetime
 from datetime import timedelta
 
-# # send to visualizer buffer
-# vis_send_buffer = queue.Queue()
-# vis_send_lock = threading.Lock()
-
-# class MQTTClient():
-#     def __init__(self, topic, client_name):
-#         self.topic = topic
-#         self.client = mqtt.Client(client_name)
-#         self.client.connect('test.mosquitto.org')
-#         self.client.subscribe(self.topic)
-
-#     # publish message to topic
-#     def publish(self):
-#         if vis_send_buffer.qsize() > 0:
-#             state = vis_send_buffer.get_nowait()
-#             message = json.dumps(state)
-#             # publishing message to topic
-#             self.client.publish(self.topic, message, qos = 1)
-
-#     def stop(self):
-#         self.client.unsubscribe()
-#         self.client.loop_stop()
-#         self.client.disconnect()
-
 class GameEngine(threading.Thread):
     def __init__(self, player_state):
         super().__init__()
@@ -158,7 +134,7 @@ class GameEngine(threading.Thread):
 
         return state, freshchg, stored_bh
 
-    def checkShieldTimer(self, expected_state):
+    def checkShieldTimer(self, expected_state, state):
         if expected_state['p1']['action']=="shield":
             if expected_state['p1']['num_shield'] > 0 and not (state['p1']['shield_time'] > 0 and state['p1']['shield_time'] <= 10):
                 self.end_time = datetime.now()+timedelta(seconds=10)
@@ -176,20 +152,3 @@ class GameEngine(threading.Thread):
         state['p1']['bullet_hit'] = "no"
         state['p2']['bullet_hit'] = "no"
         return state
-
-    # def run(self):
-    #     # self.mqtt_p = MQTTClient('visualizer17', 'publish')
-    #     # self.mqtt_p.client.loop_start()
-
-    #     need to decrement the shield timer
-    #     if (self.p1.shield_time > 0):
-    #         delayed1_time = datetime.now() + timedelta(seconds = 1)
-    #         delayed10_time = datetime.now() + timedelta(seconds = 10)
-            
-    #         if (datetime.now() == delayed1_time):
-    #             self.p1.shield_time -= 1
-    #         if self.p1.shield_time == 0:
-    #             vis_send_buffer.put_nowait(self.player_state)
-                
-    #             if (datetime.now() == delayed10_time): 
-    #                 self.mqtt_p.publish()

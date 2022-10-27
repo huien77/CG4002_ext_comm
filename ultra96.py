@@ -106,7 +106,7 @@ class AIDetector(threading.Thread):
         game_engine.start()
 
         # start ultra96 client to eval server thread
-        my_client = Client(ip_addr, port_num, group_id, secret_key)
+        my_client = Client(ip_addr, port_num, group_id, secret_key, game_engine)
         my_client.start()
         
         while action != "logout":
@@ -206,13 +206,15 @@ class MQTTClient():
 
 # eval_client
 class Client(threading.Thread):
-    def __init__(self, ip_addr, port_num, group_id, secret_key):
+    def __init__(self, ip_addr, port_num, group_id, secret_key, game_engine):
         super().__init__()
         # set up a TCP/IP socket to the port number
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_address = (ip_addr, port_num)
         self.secret_key = secret_key
         self.group_id = group_id
+        self.game_engine = game_engine
+
         try:
             # start connection
             self.socket.connect(self.server_address)
@@ -284,22 +286,22 @@ class Client(threading.Thread):
                 try:
                     state = eval_buffer.get_nowait()
 
-                    state, freshchg, stored_bh = game_engine.runLogic(state)
+                    state, freshchg, stored_bh = self.game_engine.runLogic(state)
                     if self.accepted:
                         self.send_data(state)
 
-                    state = game_engine.restoreValues(state, freshchg, stored_bh)
+                    state = self.game_engine.restoreValues(state, freshchg, stored_bh)
                     vis_send_buffer.put_nowait(state)
                     mqtt_p.publish()
 
-                    state = game_engine.resetValues(state)
+                    state = self.game_engine.resetValues(state)
 
                     if self.accepted:
                         # receive expected state from eval server
                         expected_state = self.receive()
                         print("\n\treceived from eval:\n", expected_state,"\n")
                         expected_state = json.loads(expected_state)
-                        setShieldTimer(expected_state)
+                        self.game_engine.checkShieldTimer(expected_state, state)
                         input_state(expected_state)
 
                 except Exception as e:
