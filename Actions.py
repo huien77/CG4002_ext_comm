@@ -1,8 +1,12 @@
 class Actions:
     shoot   = "shoot"
+    fail_shoot = "fail_shoot"
     shield  = "shield"
+    fail_shield = "fail_shield"
     grenade = "grenade"
+    fail_grenade = "fail_grenade"
     reload  = "reload"
+    fail_reload = "fail_reload"
     logout  = "logout"
     grenade1 = "yes1"
     grenade2 = "yes2"

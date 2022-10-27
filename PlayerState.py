@@ -37,8 +37,9 @@ class Player:
         #     self.shield_time = 10
     
     def reload(self):
-        self.action = "reload"
-        self.bullets = 6
+        if self.bullets == 0:
+            self.action = "reload"
+            self.bullets = 6
 
     def takeDamage(self, damage):
         if self.shield_health > 0:

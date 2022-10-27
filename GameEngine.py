@@ -109,16 +109,16 @@ class GameEngine(threading.Thread):
                 freshchg = True
                 self.end_time = datetime.now()+timedelta(seconds=10)
                 # state['p1']['action'] = "none"
-        elif (state['p1']['shield_time'] > 0):                        
-            # if (datetime.now().second == start_time):
-            time_diff = self.end_time - datetime.now()
-            if time_diff.total_seconds() <= 0:
-                state['p1']['shield_time'] = 0
-                state['p1']['shield_health'] = 0
-            elif time_diff.total_seconds() > 0:
-                state['p1']['shield_time'] = float(time_diff.total_seconds())
+            elif (state['p1']['shield_time'] > 0):                        
+                # if (datetime.now().second == start_time):
+                time_diff = self.end_time - datetime.now()
+                if time_diff.total_seconds() <= 0:
+                    state['p1']['shield_time'] = 0
+                    state['p1']['shield_health'] = 0
+                elif time_diff.total_seconds() > 0:
+                    state['p1']['shield_time'] = float(time_diff.total_seconds())
 
-        if state['p1']['action'] == "shoot":
+        elif state['p1']['action'] == "shoot":
             if state['p1']['bullets'] > 0:
                 state['p1']['bullets'] -= 1
                 freshchg = True

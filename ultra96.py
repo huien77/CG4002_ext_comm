@@ -92,7 +92,7 @@ class AIDetector(threading.Thread):
 
     def predict_action(self, data):
         actions = ["logout", "grenade", "idle", "reload", "shield"]
-        r = self.detector.eval_data(data, 0)
+        r = self.detector.eval_data(data, 3, 0.6)
 
         return actions[r]
 
