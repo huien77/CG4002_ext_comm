@@ -128,6 +128,10 @@ class GameEngine(threading.Thread):
                 state['p1']['grenades'] -= 1
                 freshchg = True
                 # state['p1']['action'] = "none"
+        elif state['p1']['action'] == "reload":
+            if state['p1']['bullets'] == 0:
+                state['p1']['bullets'] = 6
+                freshchg = True
 
         elif state['p1']['action'] in unrelated_actions:
             freshchg = True
