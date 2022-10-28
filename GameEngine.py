@@ -1,8 +1,4 @@
-import json
 import threading
-import time
-import queue
-import paho.mqtt.client as mqtt
 from Actions import Actions
 from PlayerState import Player
 from datetime import datetime

@@ -1,16 +1,13 @@
 # from argparse import Action
 # from asyncio import shield
 import socket
-from symbol import eval_input
 import threading
 import base64
 import sys
-import time
 import json
 import traceback
-from numpy import empty
 import paho.mqtt.client as mqtt
-from os import getcwd, path, stat
+from os import path
 from pathlib import Path
 from sys import path as sp
 import queue
