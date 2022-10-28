@@ -52,6 +52,8 @@ curr_state = {
         }
 }
 
+ONE_PLAYER_MODE = True  # Initialise as 1 player mode
+
 # AI buffer
 AI_buffer = queue.Queue()
 AI_lock = threading.Lock()
@@ -72,12 +74,6 @@ vis_send_lock = threading.Lock()
 
 state_lock = threading.Lock()
 
-def read_state(lock):
-    lock.acquire()
-    data = curr_state
-    lock.release()
-    return data
-
 def input_state(data):
     global curr_state
     state_lock.acquire()
@@ -88,16 +84,26 @@ def input_state(data):
 class AIDetector(threading.Thread):
     def __init__(self):
         super().__init__()
-        self.detector = Detector()
+        # 2 Detectors, (1 per player)
+        self.detector1 = Detector()
+        self.detector2 = Detector()
 
-    def predict_action(self, data):
+    def predict_action(self, data, player_num):
         actions = ["logout", "grenade", "idle", "reload", "shield"]
-        r = self.detector.eval_data(data, 3, 0.6)
 
+        """
+        choose detector based on player
+        """
+        if player_num == 1:
+            useFunc = self.detector1.eval_data
+        else:
+            useFunc = self.detector2.eval_data
+
+        r = useFunc(data, 3, 0.6)
         return actions[r]
 
     def run(self):
-        # DEBUGGING
+        # Initiate Terminal Outputs
         action = "none"
         last_detected = "none"
         
@@ -116,23 +122,20 @@ class AIDetector(threading.Thread):
             # Read buffers and perform actions
             while IMU_buffer.qsize() > 0:
                 data = IMU_buffer.get_nowait()
-                action = self.predict_action(data["V"])
+                player_num = data["P"]
+                action = self.predict_action(data["V"], player_num)
                 if (action != "idle"):
                     print("Predicted:\t", action, "\t\tPrev_detect:", last_detected)
                     last_detected = action
-                    # changes
-                    player_num = data["P"]
+
                     AI_buffer.put_nowait(action)
                     AI_buffer.put_nowait(player_num)
 
             if AI_buffer.qsize() > 0:
-                # action in AI_buffer should not be idle
-                # !!! for now all the actions are done by player 1
-                # !!! for 2 player game, need extra logic to check the action for p1 or p2
-
-                # changes
                 action = AI_buffer.get_nowait()
                 player_num = AI_buffer.get_nowait()
+
+                # Player_num performs actions
                 temp = game_engine.performAction(action, player_num)
                 input_state(temp)
                 eval_buffer.put_nowait([temp, player_num])
@@ -140,44 +143,31 @@ class AIDetector(threading.Thread):
             if vis_recv_buffer.qsize() > 0:
                 # visualizer sends player that is hit by grenade
                 vis_recv_buffer.get_nowait()
+                """
                 # yes1 means that p1 grenade hit p2
                 # !!! this is enough for 1 player game
                 # !!! will need extra checks for 2 player game
+                """
                 game_engine.performAction('yes1')
                 # !!! doesn't need to send the grenade hit to eval server
                 # !!! but need to send to visualiser
 
             if GUN_buffer.qsize() > 0:
-                # does the shoot action
                 player_num = GUN_buffer.get_nowait()
-                # !!! this is enough for 1 player game
-                # !!! will need extra checks for 2 player game
-                temp = game_engine.performAction('shoot')
+                temp = game_engine.performAction('shoot', player_num)
                 
-                # Check bullet hit
+                # Check bullet hit of opponent
                 if vest_buffer.qsize() > 0:
                     vest_buffer.get_nowait()
-                    # bullet1 means that p1 bullet hit p2
-                    # !!! this is enough for 1 player game
-                    # !!! will need extra checks for 2 player game
                     if player_num == 1:
                         game_engine.performAction('bullet1')
                     else:
                         game_engine.performAction('bullet2')
-                    # !!! doesn't need to send the bullet hit to eval server
-                    # !!! but need to send to visualiser
                 
                 # this output is needed by eval server
                 input_state(temp)
                 eval_buffer.put_nowait([temp, player_num])
         
-        # if action == "logout":
-        #     # action = AI_buffer.get_nowait()
-        #     temp = game_engine.performAction(action)
-        #     # temp should not have bullet hit, data should be ready to send to eval
-        #     input_state(temp)
-        #     eval_buffer.put_nowait(temp)
-
 # for visualizer
 class MQTTClient():
     def __init__(self, topic, client_name):
@@ -188,7 +178,7 @@ class MQTTClient():
 
     # publish message to topic
     def publish(self):
-        if not vis_send_buffer.empty():
+        if vis_send_buffer.qsize() > 0:
             state = vis_send_buffer.get_nowait()
             message = json.dumps(state)
             # publishing message to topic
@@ -211,8 +201,10 @@ class MQTTClient():
 class Client(threading.Thread):
     # ONE Player -> FALSE TRUE
     # TWO PLAYER -> FALSE FALSE
-    onePlayer = True
-    received_actions = [False, onePlayer]
+    global ONE_PLAYER_MODE
+    received_actions = [False, ONE_PLAYER_MODE]     # TO wait for 2 player to complete before sending to eval server
+
+    # Initialise a storage to store state to send to eval server
     evalStore = {}
     evalStore.update(curr_state)
     
@@ -295,11 +287,10 @@ class Client(threading.Thread):
             while eval_buffer.qsize() > 0:
                 try:
                     state, player_num = eval_buffer.get_nowait()
-
                     state, actionSucess = self.game_engine.runLogic(state, player_num)
+
                     vis_send_buffer.put_nowait(state)
                     mqtt_p.publish()
-                    print(self.received_actions)
 
                     if self.accepted:
                         if not self.received_actions[player_num - 1]:
@@ -308,9 +299,9 @@ class Client(threading.Thread):
                             #Store other player action
                             enemy_player = ['p1', 'p2']
                             if player_num == 1:
-                                enemy = 1
+                                enemy = 1       # Enemy in 2nd index
                             else:
-                                enemy = 0
+                                enemy = 0       # Enemy in 1st index
 
                             preserved_action = self.evalStore.get(enemy_player[enemy]).get('action')
                             self.evalStore.update(state)
@@ -324,16 +315,19 @@ class Client(threading.Thread):
                                 expected_state = self.receive()
                                 print("\n\treceived from eval:\n", expected_state,"\n")
                                 expected_state = json.loads(expected_state)
+
+                                # Game State timer check in case of wrong detection of shield
                                 self.game_engine.checkShieldTimer(expected_state, state)
 
                                 self.evalStore.update(expected_state)
                                 expected_state = self.game_engine.resetValues(expected_state)
                                 input_state(expected_state)
 
-                                self.received_actions=[False, self.onePlayer]
+                                # Reset of player eval server receivers
+                                self.received_actions=[False, ONE_PLAYER_MODE]
 
                             else: 
-                                print("SKIPPED: ", state)
+                                print("\n\t\tSKIPPED Evals: ", state)
                                 state = self.game_engine.resetValues(state)
                                 input_state(state)
 
@@ -438,14 +432,16 @@ class Server(threading.Thread):
 if __name__ == "__main__":
     if len(sys.argv) != 6:
         print('[Ultra96] Invalid number of arguments')
-        print('python ultra96.py [Eval IP address] [Eval Port] [Group ID] [Secret Key] [Local Port]')
+        print('python ultra96.py [Eval IP address] [Group ID] [Play_MODE] [Eval Port] [Local Port]')
         sys.exit()
+    secret_key = "qwerqwerqwerqwer"
 
     ip_addr = sys.argv[1]
-    port_num = int(sys.argv[2])
-    group_id = sys.argv[3]
-    secret_key = sys.argv[4]
+    group_id = sys.argv[2]
+    ONE_PLAYER_MODE = sys.argv[3] == 1
+    port_num = int(sys.argv[4])
     port_server = sys.argv[5]
+
 
     # start thread for receiving from laptop
     u_server = Server(int(port_server))

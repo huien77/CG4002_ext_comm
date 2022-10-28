@@ -27,7 +27,7 @@ class GameEngine(threading.Thread):
         self.p1 = Player(self.player_state['p1'])
         self.p2 = Player(self.player_state['p2'])
 
-    def performAction(self, action, player_num):
+    def performAction(self, action, player_num=1):
         print('[Game Engine] Received action: ', action)
 
         # Version 0: Assume DEFINITE HITS
@@ -64,7 +64,6 @@ class GameEngine(threading.Thread):
                 self.p1.grenadeDamage()
 
         elif action == Actions.reload:
-            print("RELOADING???")
             if player_num == 1:
                 self.p1.reload()
             else:
@@ -86,22 +85,24 @@ class GameEngine(threading.Thread):
             player = 'p1'
         elif player_num == 2:
             player = 'p2'
-        # stored_bh = [state.get('p1').get('bullet_hit'),state.get('p2').get('bullet_hit')]
-
-        # del state['p1']['bullet_hit']
-        # del state['p2']['bullet_hit']
         actionSucess = False
+
+        # Logout does not have fail case
         unrelated_actions = ["logout"]
 
         watchState = state[player]
         watchedAction = watchState['action']
 
         if watchedAction == "shield":
+            # There are still shield and no shields are active
             if watchState['num_shield'] > 0 and not (watchState['shield_time'] > 0 and watchState['shield_time'] <= 10):
                 watchState['num_shield'] -= 1
                 watchState['shield_time'] = 10
                 actionSucess = True
                 self.end_time = datetime.now()+timedelta(seconds=10)
+
+        # This function checks whenever action is not shield for the shield TIMER
+        # Not called when shield is instantiated for eval server
         elif (watchState['shield_time'] > 0):                        
             time_diff = self.end_time - datetime.now()
             if time_diff.total_seconds() <= 0:
@@ -110,7 +111,7 @@ class GameEngine(threading.Thread):
             elif time_diff.total_seconds() > 0:
                 watchState['shield_time'] = float(time_diff.total_seconds())
 
-        # If because shield timer will eat the elif up there, and we need to time
+        # Not elif > TIMER check used elif and we still want to check actions
         if watchedAction == "shoot":
             if watchState['bullets'] > 0:
                 watchState['bullets'] -= 1
@@ -125,7 +126,7 @@ class GameEngine(threading.Thread):
                 actionSucess = True
 
         elif watchedAction in unrelated_actions:
-            actionSucess = True
+            actionSucess = True     # Set to True as will not fail
 
         if not actionSucess:
             fail = "fail_"
