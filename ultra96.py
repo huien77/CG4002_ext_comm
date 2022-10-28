@@ -79,10 +79,8 @@ class AIDetector(threading.Thread):
 
     def predict_action(self, data, player_num):
         actions = ["logout", "grenade", "idle", "reload", "shield"]
-
-        """
-        choose detector based on player
-        """
+        
+        # Detector based on player (CANNOT use same detector for multiple people)
         if player_num == 1:
             useFunc = self.detector1.eval_data
         else:
@@ -190,6 +188,7 @@ class MQTTClient():
 class Client(threading.Thread):
     # ONE Player -> FALSE TRUE
     # TWO PLAYER -> FALSE FALSE
+    # NOTE v v v v v v v v Possible bug point!!! 
     global ONE_PLAYER_MODE
     received_actions = [False, ONE_PLAYER_MODE]     # TO wait for 2 player to complete before sending to eval server
 
@@ -294,7 +293,7 @@ class Client(threading.Thread):
 
                             preserved_action = self.evalStore.get(enemy_player[enemy]).get('action')
                             self.evalStore.update(state)
-                            #RESTORE other players action
+                            # RESTORE other players action
                             self.evalStore[enemy_player[enemy]]['action'] = preserved_action
 
                             if self.received_actions[0] and self.received_actions[1]:
