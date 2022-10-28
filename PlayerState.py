@@ -37,9 +37,8 @@ class Player:
         #     self.shield_time = 10
     
     def reload(self):
-        if self.bullets == 0:
-            self.action = "reload"
-            self.bullets = 6
+        self.action = "reload"
+        self.bullets = 6
 
     def takeDamage(self, damage):
         if self.shield_health > 0:
@@ -58,12 +57,9 @@ class Player:
     def grenadeDamage(self):
         self.takeDamage(30)
 
-    def logoutOne(self):
+    def logout(self):
         self.action = "logout"
     
-    def logoutTwo(self):
-        self.action = "logout"
-
     def reset(self):
         self.hp = 100
         self.bullets = 6

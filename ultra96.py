@@ -52,6 +52,29 @@ curr_state = {
         }
 }
 
+eval_state = {
+    "p1": {
+        "hp": 100,
+        "action": 'none',
+        "bullets": 6,
+        "grenades": 2,
+        "shield_time": 0,
+        "shield_health": 0,
+        "num_shield": 3,
+        "num_deaths": 0
+        },
+    "p2": {
+        "hp": 100,
+        "action": 'none',
+        "bullets": 6,
+        "grenades": 2,
+        "shield_time": 0,
+        "shield_health": 0,
+        "num_shield": 3,
+        "num_deaths": 0
+        }
+}
+
 # AI buffer
 AI_buffer = queue.Queue()
 AI_lock = threading.Lock()
@@ -81,7 +104,7 @@ def read_state(lock):
 def input_state(data):
     global curr_state
     state_lock.acquire()
-    curr_state = data
+    curr_state.update(data)
     state_lock.release()
 
 # for AI
@@ -115,7 +138,7 @@ class AIDetector(threading.Thread):
 
             # Read buffers and perform actions
             while IMU_buffer.qsize() > 0:
-                data = IMU_buffer.get()
+                data = IMU_buffer.get_nowait()
                 action = self.predict_action(data["V"])
                 if (action != "idle"):
                     print("Predicted:\t", action, "\t\tPrev_detect:", last_detected)
@@ -135,7 +158,7 @@ class AIDetector(threading.Thread):
                 player_num = AI_buffer.get_nowait()
                 temp = game_engine.performAction(action, player_num)
                 input_state(temp)
-                eval_buffer.put_nowait(temp)
+                eval_buffer.put_nowait([temp, player_num])
 
             if vis_recv_buffer.qsize() > 0:
                 # visualizer sends player that is hit by grenade
@@ -149,7 +172,7 @@ class AIDetector(threading.Thread):
 
             if GUN_buffer.qsize() > 0:
                 # does the shoot action
-                GUN_buffer.get_nowait()
+                player_num = GUN_buffer.get_nowait()
                 # !!! this is enough for 1 player game
                 # !!! will need extra checks for 2 player game
                 temp = game_engine.performAction('shoot')
@@ -160,13 +183,16 @@ class AIDetector(threading.Thread):
                     # bullet1 means that p1 bullet hit p2
                     # !!! this is enough for 1 player game
                     # !!! will need extra checks for 2 player game
-                    game_engine.performAction('bullet1')
+                    if player_num == 1:
+                        game_engine.performAction('bullet1')
+                    else:
+                        game_engine.performAction('bullet2')
                     # !!! doesn't need to send the bullet hit to eval server
                     # !!! but need to send to visualiser
                 
                 # this output is needed by eval server
                 input_state(temp)
-                eval_buffer.put_nowait(temp)
+                eval_buffer.put_nowait([temp, player_num])
         
         # if action == "logout":
         #     # action = AI_buffer.get_nowait()
@@ -206,6 +232,8 @@ class MQTTClient():
 
 # eval_client
 class Client(threading.Thread):
+    received_actions = [False, True]
+    evalStore = eval_state
     def __init__(self, ip_addr, port_num, group_id, secret_key, game_engine):
         super().__init__()
         # set up a TCP/IP socket to the port number
@@ -284,29 +312,52 @@ class Client(threading.Thread):
         while True:
             while eval_buffer.qsize() > 0:
                 try:
-                    state = eval_buffer.get_nowait()
+                    state, player_num = eval_buffer.get_nowait()
 
-                    state, freshchg, stored_bh = self.game_engine.runLogic(state)
-                    if self.accepted:
-                        self.send_data(state)
-
-                    state = self.game_engine.restoreValues(state, freshchg, stored_bh)
+                    state, actionSucess = self.game_engine.runLogic(state, player_num)
                     vis_send_buffer.put_nowait(state)
                     mqtt_p.publish()
-
-                    state = self.game_engine.resetValues(state)
+                    print(self.received_actions)
 
                     if self.accepted:
-                        # receive expected state from eval server
-                        expected_state = self.receive()
-                        print("\n\treceived from eval:\n", expected_state,"\n")
-                        expected_state = json.loads(expected_state)
-                        self.game_engine.checkShieldTimer(expected_state, state)
-                        input_state(expected_state)
+                        if not self.received_actions[player_num - 1]:
+                            self.received_actions[player_num-1] = True
+                            state = self.game_engine.prepForEval(state, player_num, actionSucess)
+                            #Store other player action
+                            enemy_player = ['p1', 'p2']
+                            if player_num == 1:
+                                enemy = 1
+                            else:
+                                enemy = 0
+                            print("\n\n THe STATE: " ,state)
+                            preserved_action = self.evalStore.get(enemy_player[enemy]).get('action')
+                            self.evalStore.update(state)
+                            #RESTORE other players action
+                            print("\n\n CHECKTHIS: \n", state)
+                            self.evalStore[enemy_player[enemy]]['action'] = preserved_action
+                            print("\n\n VS SEE THIS :\n", self.evalStore)
+
+
+                            if self.received_actions[0] and self.received_actions[1]:
+                                self.send_data(self.evalStore)
+
+                                # receive expected state from eval server
+                                expected_state = self.receive()
+                                print("\n\treceived from eval:\n", expected_state,"\n")
+                                expected_state = json.loads(expected_state)
+                                self.game_engine.checkShieldTimer(expected_state, state)
+                                expected_state = self.game_engine.resetValues(state)
+                                print("\nPOST RESET: ", expected_state)
+                                input_state(expected_state)
+                                self.received_actions=[False, True]
+
+                            else: 
+                                state = self.game_engine.resetValues(state)
+                                input_state(state)
 
                 except Exception as e:
                     print(e)
-            
+
     def stop(self):
         self.socket.close()
         print('[Evaluation Client] Closed')
@@ -388,7 +439,7 @@ class Server(threading.Thread):
                 if data["D"] == "IMU":
                     IMU_buffer.put_nowait(data)
                 elif data["D"] == "GUN":
-                    GUN_buffer.put_nowait(data)
+                    GUN_buffer.put_nowait(data["P"])
                 else:
                     vest_buffer.put_nowait(data)
                 
