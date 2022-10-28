@@ -80,10 +80,8 @@ def read_state(lock):
 
 def input_state(data):
     global curr_state
-    print("\nININININPUT: \n", data)
     state_lock.acquire()
     curr_state.update(data)
-    print("\nCURRRRRR: \n", curr_state)
     state_lock.release()
 
 # for AI
@@ -211,9 +209,13 @@ class MQTTClient():
 
 # eval_client
 class Client(threading.Thread):
-    received_actions = [False, True]
+    # ONE Player -> FALSE TRUE
+    # TWO PLAYER -> FALSE FALSE
+    onePlayer = True
+    received_actions = [False, onePlayer]
     evalStore = {}
     evalStore.update(curr_state)
+    
     def __init__(self, ip_addr, port_num, group_id, secret_key, game_engine):
         super().__init__()
         # set up a TCP/IP socket to the port number
@@ -326,9 +328,9 @@ class Client(threading.Thread):
 
                                 self.evalStore.update(expected_state)
                                 expected_state = self.game_engine.resetValues(expected_state)
-                                print("\nPOST RESET: ", expected_state)
                                 input_state(expected_state)
-                                self.received_actions=[False, True]
+
+                                self.received_actions=[False, self.onePlayer]
 
                             else: 
                                 print("SKIPPED: ", state)
