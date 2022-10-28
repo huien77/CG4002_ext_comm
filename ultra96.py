@@ -52,29 +52,6 @@ curr_state = {
         }
 }
 
-eval_state = {
-    "p1": {
-        "hp": 100,
-        "action": 'none',
-        "bullets": 6,
-        "grenades": 2,
-        "shield_time": 0,
-        "shield_health": 0,
-        "num_shield": 3,
-        "num_deaths": 0
-        },
-    "p2": {
-        "hp": 100,
-        "action": 'none',
-        "bullets": 6,
-        "grenades": 2,
-        "shield_time": 0,
-        "shield_health": 0,
-        "num_shield": 3,
-        "num_deaths": 0
-        }
-}
-
 # AI buffer
 AI_buffer = queue.Queue()
 AI_lock = threading.Lock()
@@ -103,8 +80,10 @@ def read_state(lock):
 
 def input_state(data):
     global curr_state
+    print("\nININININPUT: \n", data)
     state_lock.acquire()
     curr_state.update(data)
+    print("\nCURRRRRR: \n", curr_state)
     state_lock.release()
 
 # for AI
@@ -233,7 +212,8 @@ class MQTTClient():
 # eval_client
 class Client(threading.Thread):
     received_actions = [False, True]
-    evalStore = eval_state
+    evalStore = {}
+    evalStore.update(curr_state)
     def __init__(self, ip_addr, port_num, group_id, secret_key, game_engine):
         super().__init__()
         # set up a TCP/IP socket to the port number
@@ -329,14 +309,11 @@ class Client(threading.Thread):
                                 enemy = 1
                             else:
                                 enemy = 0
-                            print("\n\n THe STATE: " ,state)
+
                             preserved_action = self.evalStore.get(enemy_player[enemy]).get('action')
                             self.evalStore.update(state)
                             #RESTORE other players action
-                            print("\n\n CHECKTHIS: \n", state)
                             self.evalStore[enemy_player[enemy]]['action'] = preserved_action
-                            print("\n\n VS SEE THIS :\n", self.evalStore)
-
 
                             if self.received_actions[0] and self.received_actions[1]:
                                 self.send_data(self.evalStore)
@@ -346,12 +323,15 @@ class Client(threading.Thread):
                                 print("\n\treceived from eval:\n", expected_state,"\n")
                                 expected_state = json.loads(expected_state)
                                 self.game_engine.checkShieldTimer(expected_state, state)
-                                expected_state = self.game_engine.resetValues(state)
+
+                                self.evalStore.update(expected_state)
+                                expected_state = self.game_engine.resetValues(expected_state)
                                 print("\nPOST RESET: ", expected_state)
                                 input_state(expected_state)
                                 self.received_actions=[False, True]
 
                             else: 
+                                print("SKIPPED: ", state)
                                 state = self.game_engine.resetValues(state)
                                 input_state(state)
 

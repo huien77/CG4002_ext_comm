@@ -11,7 +11,7 @@ from datetime import timedelta
 class GameEngine(threading.Thread):
     # KEYS we dont need to send to Eval Server
     non_eval_keys = ['bullet_hit']
-    default_non_eval_pairs = [('bullet_hit', 'no')]
+    default_non_eval_pairs = [('bullet_hit', 'no'), ('action','none')]
     def __init__(self, player_state):
         super().__init__()
         self.player_state = player_state
@@ -102,15 +102,16 @@ class GameEngine(threading.Thread):
                 watchState['shield_time'] = 10
                 actionSucess = True
                 self.end_time = datetime.now()+timedelta(seconds=10)
-            elif (watchState['shield_time'] > 0):                        
-                time_diff = self.end_time - datetime.now()
-                if time_diff.total_seconds() <= 0:
-                    watchState['shield_time'] = 0
-                    watchState['shield_health'] = 0
-                elif time_diff.total_seconds() > 0:
-                    watchState['shield_time'] = float(time_diff.total_seconds())
+        elif (watchState['shield_time'] > 0):                        
+            time_diff = self.end_time - datetime.now()
+            if time_diff.total_seconds() <= 0:
+                watchState['shield_time'] = 0
+                watchState['shield_health'] = 0
+            elif time_diff.total_seconds() > 0:
+                watchState['shield_time'] = float(time_diff.total_seconds())
 
-        elif watchedAction == "shoot":
+        # If because shield timer will eat the elif up there, and we need to time
+        if watchedAction == "shoot":
             if watchState['bullets'] > 0:
                 watchState['bullets'] -= 1
                 actionSucess = True
