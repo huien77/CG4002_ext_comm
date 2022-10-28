@@ -1,11 +1,8 @@
-from argparse import Action
-from asyncio import shield
-from re import M
-import re
+# from argparse import Action
+# from asyncio import shield
 import socket
 from symbol import eval_input
 import threading
-import time
 import base64
 import sys
 import time
@@ -16,10 +13,7 @@ import paho.mqtt.client as mqtt
 from os import getcwd, path, stat
 from pathlib import Path
 from sys import path as sp
-from datetime import datetime
-from datetime import timedelta
 import queue
-import copy
 
 sp.append(path.join((Path.cwd()).parent,"jupyter_notebooks","capstoneml","scripts"))
 from start_detector import Detector
