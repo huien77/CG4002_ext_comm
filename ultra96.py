@@ -41,7 +41,7 @@ curr_state = {
         }
 }
 
-ONE_PLAYER_MODE = True  # Initialise as 1 player mode
+ONE_PLAYER_MODE = False  # Initialise as 1 player mode
 
 # AI buffer
 AI_buffer = queue.Queue()
@@ -117,12 +117,13 @@ class AIDetector(threading.Thread):
                     print("Predicted:\t", action, "\t\tPrev_detect:", last_detected)
                     last_detected = action
 
-                    AI_buffer.put_nowait(action)
+                    AI_buffer.put_nowait([action, player_num])
                     AI_buffer.put_nowait(player_num)
 
             if AI_buffer.qsize() > 0:
-                action = AI_buffer.get_nowait()
-                player_num = AI_buffer.get_nowait()
+                data = AI_buffer.get_nowait()
+                action = data[0]
+                player_num = data[1]
 
                 # Player_num performs actions
                 temp = game_engine.performAction(action, player_num)
@@ -271,6 +272,9 @@ class Client(threading.Thread):
                     vis_send_buffer.put_nowait(state)
                     mqtt_p.publish()
 
+                    print("Checking Player: ", player_num)
+                    print("RECEIVED BOTH: ", self.received_actions)
+
                     if state['p1']['action'] == 'grenade' or state['p2']['action'] == 'grenade':
                         if vis_recv_buffer.qsize() > 0:
                             # visualizer sends player that is hit by grenade
@@ -280,8 +284,6 @@ class Client(threading.Thread):
                                 state = self.game_engine.resetValues(state)
                                 vis_send_buffer.put_nowait(state)
                                 mqtt_p.publish()
-
-                    print("RECEIVED BOTH: ", self.received_actions)
                     
                     if self.accepted:
                         if not self.received_actions[player_num - 1]:
@@ -430,18 +432,29 @@ class Server(threading.Thread):
                 msg, msg2 = self.receive()
                 if msg:
                     data = json.loads(msg)
+
+                    if data["D"] == "IMU":
+                        IMU_buffer.put_nowait(data)
+                    elif data["D"] == "GUN":
+                        GUN_buffer.put_nowait(data["P"])
+                        print("Printing ", data["P"])
+                    else:
+                        vest_buffer.put_nowait(data)
                 if msg2:
                     data = json.loads(msg2)
 
-                print("msg: ", msg)
-                print("msg2: ", msg2)
+                    if data["D"] == "IMU":
+                        IMU_buffer.put_nowait(data)
+                    elif data["D"] == "GUN":
+                        GUN_buffer.put_nowait(data["P"])
+                        print("Printing ", data["P"])
+                    else:
+                        vest_buffer.put_nowait(data)
+
+                # print("msg: ", msg)
+                # print("msg2: ", msg2)
                 
-                if data["D"] == "IMU":
-                    IMU_buffer.put_nowait(data)
-                elif data["D"] == "GUN":
-                    GUN_buffer.put_nowait(data["P"])
-                else:
-                    vest_buffer.put_nowait(data)
+                
                 
             except Exception as _:
                 traceback.print_exc()
