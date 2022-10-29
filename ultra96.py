@@ -344,12 +344,11 @@ class Server(threading.Thread):
     def setup_connection(self):
         print('[Ultra96 Server] Waiting for laptop')
         
-        self.server_socket.listen(1)
+        self.server_socket.listen(2)
         self.connection, client_address = self.server_socket.accept()
-
-        print("[Ultra96 Server] Connected")
-
-        return client_address
+        print("[Ultra96 Server] Connected Laptop 1")
+        self.server_socket.accept()
+        print("[Ultra96 Server] Connected Laptop 2")
 
     # receive from the laptop client
     def receive(self):
