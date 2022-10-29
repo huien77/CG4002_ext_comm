@@ -86,7 +86,9 @@ class AIDetector(threading.Thread):
         else:
             useFunc = self.detector2.eval_data
 
-        r = useFunc(data, 3, 0.6)
+        # Sensitivity: Percentage certainty that prediction is correct
+        # Threshold: Threshold of standard deviation of Accelerators combined
+        r = useFunc(data, 3, sensitivity=0.6, threshold=0.055)
         return actions[r]
 
     def run(self):
@@ -126,18 +128,6 @@ class AIDetector(threading.Thread):
                 temp = game_engine.performAction(action, player_num)
                 input_state(temp)
                 eval_buffer.put_nowait([temp, player_num])
-
-            if vis_recv_buffer.qsize() > 0:
-                # visualizer sends player that is hit by grenade
-                vis_recv_buffer.get_nowait()
-                """
-                # yes1 means that p1 grenade hit p2
-                # !!! this is enough for 1 player game
-                # !!! will need extra checks for 2 player game
-                """
-                game_engine.performAction('yes1')
-                # !!! doesn't need to send the grenade hit to eval server
-                # !!! but need to send to visualiser
 
             if GUN_buffer.qsize() > 0:
                 player_num = GUN_buffer.get_nowait()
@@ -190,6 +180,7 @@ class Client(threading.Thread):
     # TWO PLAYER -> FALSE FALSE
     # NOTE v v v v v v v v Possible bug point!!! 
     global ONE_PLAYER_MODE
+    # global ONE_PLAYER_MODE = True
     received_actions = [False, ONE_PLAYER_MODE]     # TO wait for 2 player to complete before sending to eval server
 
     # Initialise a storage to store state to send to eval server
@@ -280,6 +271,16 @@ class Client(threading.Thread):
                     vis_send_buffer.put_nowait(state)
                     mqtt_p.publish()
 
+                    if state['p1']['action'] == 'grenade' or state['p2']['action'] == 'grenade':
+                        if vis_recv_buffer.qsize() > 0:
+                            # visualizer sends player that is hit by grenade
+                            data = vis_recv_buffer.get_nowait()
+                            if data != 'no':
+                                state = self.game_engine.performAction(data)
+                                state = self.game_engine.resetValues(state)
+                                vis_send_buffer.put_nowait(state)
+                                mqtt_p.publish()
+                                
                     if self.accepted:
                         if not self.received_actions[player_num - 1]:
                             self.received_actions[player_num-1] = True
@@ -426,7 +427,10 @@ if __name__ == "__main__":
 
     ip_addr = sys.argv[1]
     group_id = sys.argv[2]
-    ONE_PLAYER_MODE = sys.argv[3] == 1
+    if int(sys.argv[3]) == 1:
+        ONE_PLAYER_MODE = True
+    else:
+        ONE_PLAYER_MODE = False
     port_num = int(sys.argv[4])
     port_server = sys.argv[5]
 

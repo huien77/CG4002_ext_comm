@@ -45,6 +45,12 @@ class GameEngine(threading.Thread):
             self.p1.bulletDamage()
             self.p2.bullet_hit='yes'
 
+        elif action == Actions.grenade1:
+            self.p2.grenadeDamage()
+        
+        elif action == Actions.grenade2:
+            self.p1.grenadeDamage()
+
         elif action == Actions.shield:
             if player_num == 1:
                 self.p1.shield()
@@ -54,10 +60,8 @@ class GameEngine(threading.Thread):
         elif action == Actions.grenade:
             if player_num == 1:
                 self.p1.grenade()
-                self.p2.grenadeDamage()
             else:
                 self.p2.grenade()
-                self.p1.grenadeDamage()
 
         elif action == Actions.reload:
             if player_num == 1:
