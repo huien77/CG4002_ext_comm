@@ -338,7 +338,8 @@ class Server(threading.Thread):
         # TCP/IP socket
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_address = ('', port_num)
-        self.connection = None
+        self.connection1 = None
+        self.connection2 = None
 
         print("[Ultra96 Server] Starting on %s" % port_num)
 
@@ -349,9 +350,9 @@ class Server(threading.Thread):
         print('[Ultra96 Server] Waiting for laptop')
         
         self.server_socket.listen(2)
-        self.connection, client_address = self.server_socket.accept()
+        self.connection1, client_address = self.server_socket.accept()
         print("[Ultra96 Server] Connected Laptop 1")
-        self.server_socket.accept()
+        self.connection2, client_address = self.server_socket.accept()
         print("[Ultra96 Server] Connected Laptop 2")
 
     # receive from the laptop client
@@ -360,23 +361,34 @@ class Server(threading.Thread):
 
         try:
             data = b''
+            data2 = b''
             while not data.endswith(b'_'):
-                _d = self.connection.recv(1)
+                _d = self.connection1.recv(1)
+                _d2 = self.connection2.recv(1)
                 if not _d:
                     data = b''
                     break
+                if not _d2:
+                    data2 = b''
                 data += _d
+                data2 += _d2
 
             if len(data) == 0:
                 print('no more data from laptop')
                 self.stop()
 
+            if len(data2) == 0:
+                self.stop()
+
             data = data.decode("utf-8")
             length = int(data[:-1])
+            data2 = data2.decode("utf-8")
+            length2 = int(data2[:-1])
 
             data = b''
+            data2 = b''
             while len(data) < length:
-                _d = self.connection.recv(length - len(data))
+                _d = self.connection1.recv(length - len(data))
                 if not _d:
                     data = b''
                     break
@@ -388,11 +400,25 @@ class Server(threading.Thread):
 
             msg = data.decode("utf8")
 
+            while len(data2) < length2:
+                _d = self.connection2.recv(length2 - len(data2))
+                if not _d:
+                    data2 = b''
+                    break
+                data2 += _d
+            
+            if len(data2) == 0:
+                print('no more data from laptop')
+                self.stop()
+
+            msg = data.decode("utf8")
+            msg2 = data2.decode("utf8")
+
         except Exception as _:
             traceback.print_exc()
             self.stop()
         
-        return msg
+        return msg, msg2
 
     def run(self):
         self.setup_connection()
@@ -401,8 +427,14 @@ class Server(threading.Thread):
 
         while True:
             try:
-                msg = self.receive()
-                data = json.loads(msg)
+                msg, msg2 = self.receive()
+                if msg:
+                    data = json.loads(msg)
+                if msg2:
+                    data = json.loads(msg2)
+
+                print("msg: ", msg)
+                print("msg2: ", msg2)
                 
                 if data["D"] == "IMU":
                     IMU_buffer.put_nowait(data)
