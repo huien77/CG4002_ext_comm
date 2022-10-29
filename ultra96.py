@@ -280,7 +280,9 @@ class Client(threading.Thread):
                                 state = self.game_engine.resetValues(state)
                                 vis_send_buffer.put_nowait(state)
                                 mqtt_p.publish()
-                                
+
+                    print("RECEIVED BOTH: ", self.received_actions)
+                    
                     if self.accepted:
                         if not self.received_actions[player_num - 1]:
                             self.received_actions[player_num-1] = True
@@ -296,6 +298,7 @@ class Client(threading.Thread):
                             self.evalStore.update(state)
                             # RESTORE other players action
                             self.evalStore[enemy_player[enemy]]['action'] = preserved_action
+                            
 
                             if self.received_actions[0] and self.received_actions[1]:
                                 self.send_data(self.evalStore)
@@ -319,6 +322,7 @@ class Client(threading.Thread):
                                 print("\n\t\tSKIPPED Evals: ", state)
                                 state = self.game_engine.resetValues(state)
                                 input_state(state)
+
 
                 except Exception as e:
                     print(e)
