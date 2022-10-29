@@ -30,12 +30,8 @@ class GameEngine(threading.Thread):
         if action == Actions.shoot:
             if player_num == 1:
                 self.p1.shoot()
-                self.p2.bulletDamage()
-                self.p1.bullet_hit = 'yes'
             else:
                 self.p2.shoot()
-                self.p1.bulletDamage()
-                self.p2.bullet_hit = 'yes'
 
         elif action == Actions.vest2:
             self.p2.bulletDamage()

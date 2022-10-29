@@ -118,7 +118,6 @@ class AIDetector(threading.Thread):
                     last_detected = action
 
                     AI_buffer.put_nowait([action, player_num])
-                    AI_buffer.put_nowait(player_num)
 
             if AI_buffer.qsize() > 0:
                 data = AI_buffer.get_nowait()
@@ -295,15 +294,20 @@ class Client(threading.Thread):
                                 enemy = 1       # Enemy in 2nd index
                             else:
                                 enemy = 0       # Enemy in 1st index
-
-                            preserved_action = self.evalStore.get(enemy_player[enemy]).get('action')
+                            
+                            # preserved_action = self.evalStore.get(enemy_player[enemy]).get('action')
                             self.evalStore.update(state)
                             # RESTORE other players action
-                            self.evalStore[enemy_player[enemy]]['action'] = preserved_action
-                            
+                            # print("\n\nBefore Restoring preserved ", self.evalStore)
+                            # print(preserved_action)
+                            # self.evalStore[enemy_player[enemy]]['action'] = preserved_action
+                            print("\n\tPost Restoration: ", self.evalStore)
 
                             if self.received_actions[0] and self.received_actions[1]:
+                                print(self.evalStore)
                                 self.send_data(self.evalStore)
+
+                                # print("\n\tSent to Evals: ", self.evalStore)
 
                                 # receive expected state from eval server
                                 expected_state = self.receive()
@@ -317,11 +321,13 @@ class Client(threading.Thread):
                                 expected_state = self.game_engine.resetValues(expected_state)
                                 input_state(expected_state)
 
+                                print("\n\t\tLatest EvalsStore: ", self.evalStore)
+
                                 # Reset of player eval server receivers
                                 self.received_actions=[False, ONE_PLAYER_MODE]
 
                             else: 
-                                print("\n\t\tSKIPPED Evals: ", state)
+                                # print("\n\t\tSKIPPED Evals: ", self.evalStore)
                                 state = self.game_engine.resetValues(state)
                                 input_state(state)
 
