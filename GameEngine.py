@@ -16,7 +16,7 @@ class GameEngine(threading.Thread):
 
         self.end_time = datetime.now()
         
-        print('[Game Engine: STARTED \n\n')
+        print('[Game Engine: STARTED] \n\n')
     
     def updateFromEval(self, correctedState):
         self.player_state.update(correctedState)
@@ -24,7 +24,7 @@ class GameEngine(threading.Thread):
         self.p2 = Player(self.player_state['p2'])
 
     def performAction(self, action, player_num=1):
-        print('[Game Engine] Received action: ', action)
+        print('[Game Engine] Received action:', action, 'from player', player_num)
 
         # Version 0: Assume DEFINITE HITS
         if action == Actions.shoot:
@@ -175,6 +175,8 @@ class GameEngine(threading.Thread):
     
     def resetValues(self, state):
         # for k in self.non_eval_keys:
-        state['p1'].update(self.default_non_eval_pairs)
-        state['p2'].update(self.default_non_eval_pairs)
+        # state['p1'].update(self.default_non_eval_pairs)
+        # state['p2'].update(self.default_non_eval_pairs)
+        state['p1']['action'] = 'none'
+        state['p2']['action'] = 'none'
         return state
