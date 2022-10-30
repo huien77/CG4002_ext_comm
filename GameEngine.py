@@ -179,4 +179,6 @@ class GameEngine(threading.Thread):
         # state['p2'].update(self.default_non_eval_pairs)
         state['p1']['action'] = 'none'
         state['p2']['action'] = 'none'
+        state['p1']['bullet_hit'] = 'no'
+        state['p2']['bullet_hit'] = 'no'
         return state

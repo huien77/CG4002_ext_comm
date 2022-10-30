@@ -43,11 +43,6 @@ curr_state = {
 
 ONE_PLAYER_MODE = False  # Initialise as 1 player mode
 
-# AI buffer
-AI_buffer1 = queue.Queue()
-AI_buffer2 = queue.Queue()
-# AI_buffer = queue.Queue()
-AI_lock = threading.Lock()
 # internal comm buffer
 IMU_buffer = queue.Queue()
 IMU_buffer2 = queue.Queue()
@@ -76,22 +71,15 @@ def input_state(data):
 class AIDetector(threading.Thread):
     def __init__(self, player):
         super().__init__()
-        # 2 Detectors, (1 per player)
-        self.detector1 = Detector()
+        # 2 Detectors, (1 per player) [1 Created as there are 2 threads]
+        self.detector = Detector()
         self.player_num = player
         print("Initialised AI for player", self.player_num)
-        # self.detector2 = Detector()
 
     def predict_action(self, data):
         actions = ["logout", "grenade", "idle", "reload", "shield"]
         
-        # Detector based on player (CANNOT use same detector for multiple people)
-        # if player_num == 1:
-        #     useFunc = self.detector1.eval_data
-        # else:
-        #     useFunc = self.detector2.eval_data
-
-        useFunc = self.detector1.eval_data
+        useFunc = self.detector.eval_data
 
         # Sensitivity: Percentage certainty that prediction is correct
         # Threshold: Threshold of standard deviation of Accelerators combined
@@ -124,18 +112,13 @@ class AIDetector(threading.Thread):
                         # player_num = data["P"]
                         action = self.predict_action(data["V"])
                         if (action != "idle"):
-                            print("Predicted:\t", action, "from player", self.player_num, "\t\tPrev_detect:", last_detected)
+                            print("\033[0;33m\n\n\nPredicted:\t", action, "from player\t", self.player_num, "\t\tPrev_detect:", last_detected, end="\033[0m")
                             last_detected = action
 
                             temp = game_engine.performAction(action, self.player_num)
                             input_state(temp)
                             eval_buffer.put_nowait([temp, self.player_num])
 
-                            # if self.player_num == 1:
-                            # AI_buffer1.put_nowait(action)
-                            # else:
-                            #     AI_buffer2.put_nowait([action])
-                            # AI_buffer.put_nowait(action)
                     except Exception as e:
                         # print(e)
                         pass
@@ -146,47 +129,15 @@ class AIDetector(threading.Thread):
                         # player_num = data["P"]
                         action = self.predict_action(data["V"])
                         if (action != "idle"):
-                            print("Predicted:\t", action, "from player", self.player_num, "\t\tPrev_detect:", last_detected)
+                            print("\033[0;33m\n\n\nPredicted:\t", action, "from player\t", self.player_num, "\t\tPrev_detect:", last_detected, end="\033[0m")
                             last_detected = action
 
                             temp = game_engine.performAction(action, self.player_num)
                             input_state(temp)
                             eval_buffer.put_nowait([temp, self.player_num])
-
-                            # if self.player_num == 1:
-                            #     AI_buffer1.put_nowait([action])
-                            # else:
-                            # AI_buffer2.put_nowait(action)
-                            # AI_buffer.put_nowait(action)
                     except Exception as e:
                         # print(e)
                         pass
-
-            # if AI_buffer1.qsize() > 0:
-            #     data = AI_buffer1.get_nowait()
-            #     # action = data[0]
-            #     print("\n\t[AI_BUFFER1]: ", data, "from", self.player_num, "\n\t")
-            #     # Player_num performs actions
-            #     temp = game_engine.performAction(action, self.player_num)
-            #     input_state(temp)
-            #     eval_buffer.put_nowait([temp, self.player_num])
-            # if AI_buffer.qsize() > 0:
-            #     data = AI_buffer.get_nowait()
-            #     action = data[0]
-            #     print("\n\t[AI_BUFFER1]: ", action, "from", self.player_num, "\n\t")
-            #     # Player_num performs actions
-            #     temp = game_engine.performAction(action, self.player_num)
-            #     input_state(temp)
-            #     eval_buffer.put_nowait([temp, self.player_num])
-
-            # if AI_buffer2.qsize() > 0:
-            #     data = AI_buffer2.get_nowait()
-            #     action = data[0]
-            #     print("\n\t[AI_BUFFER2]: ", action, "from", self.player_num, "\n\t")
-            #     # Player_num performs actions
-            #     temp = game_engine.performAction(action, self.player_num)
-            #     input_state(temp)
-            #     eval_buffer.put_nowait([temp, self.player_num])
 
             if GUN_buffer.qsize() > 0:
                 try:
@@ -214,11 +165,15 @@ class MQTTClient():
         self.client = mqtt.Client(client_name)
         self.client.connect('test.mosquitto.org')
         self.client.subscribe(self.topic)
+        self.uniqueCounter = 0
 
     # publish message to topic
     def publish(self):
         if vis_send_buffer.qsize() > 0:
+            self.uniqueCounter += 1
             state = vis_send_buffer.get_nowait()
+            state["turn"] = self.uniqueCounter
+            print("PUBLISHED TO MQTT:", state, end="\n")
             message = json.dumps(state)
             # publishing message to topic
             self.client.publish(self.topic, message, qos = 1)
@@ -339,22 +294,23 @@ class Client(threading.Thread):
                     else:
                         preserved_action2 = state['p2']['action']
 
-                    print("\nPRESERVED ACTIONS:", preserved_action1, preserved_action2)
+                    print("PRESERVED ACTIONS:", preserved_action1, preserved_action2)
 
                     state, actionSucess = self.game_engine.runLogic(state, player_num)
 
                     vis_send_buffer.put_nowait(state)
-                    print("PUBLISHED TO MQTT:", state)
                     mqtt_p.publish()
-
-                    state = self.game_engine.resetValues(state)
+                    if not self.accepted:
+                        state = self.game_engine.resetValues(state)
                     input_state(state)
 
                     if state['p1']['action'] == 'grenade' or state['p2']['action'] == 'grenade':
                         if vis_recv_buffer.qsize() > 0:
                             # visualizer sends player that is hit by grenade
                             data = vis_recv_buffer.get_nowait()
+                            print("\rPointed at Picture!! Should HIT!")
                             if data != 'no':
+                                print("Weird SHit Happened")
                                 state = self.game_engine.performAction(data)
                                 state = self.game_engine.resetValues(state)
                                 vis_send_buffer.put_nowait(state)
@@ -365,14 +321,14 @@ class Client(threading.Thread):
                             self.received_actions[player_num - 1] = True
                             state = self.game_engine.prepForEval(state, player_num, actionSucess)
                             #Store other player action
-                            enemy_player = ['p1', 'p2']
+                            # enemy_player = ['p1', 'p2']
                             
-                            if player_num == 1:
-                                enemy = 1       # Enemy in 2nd index
-                                # preserved_action1 = self.evalStore.get(enemy_player[player_num - 1]).get('action')
-                            else:
-                                enemy = 0       # Enemy in 1st index
-                                # preserved_action2 = self.evalStore.get(enemy_player[player_num - 1]).get('action')
+                            # if player_num == 1:
+                            #     enemy = 1       # Enemy in 2nd index
+                            #     # preserved_action1 = self.evalStore.get(enemy_player[player_num - 1]).get('action')
+                            # else:
+                            #     enemy = 0       # Enemy in 1st index
+                            #     # preserved_action2 = self.evalStore.get(enemy_player[player_num - 1]).get('action')
 
                             self.evalStore.update(state)
                             # RESTORE other players action
