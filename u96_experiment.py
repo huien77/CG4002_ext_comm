@@ -290,12 +290,6 @@ class Client(threading.Thread):
         return msg
 
     def run(self):
-        u_server1 = Server(int(port_server1),1)
-        u_server1.start()
-
-        u_server2 = Server(int(port_server2),2)
-        u_server2.start()
-        
         preserved_action1 = 'none'
         preserved_action2 = 'none'
         while True:
@@ -317,8 +311,6 @@ class Client(threading.Thread):
 
                     vis_send_buffer.put_nowait(state)
                     mqtt_p.publish()
-                    if not self.accepted:
-                        state = game_engine.resetValues(state)
 
                     if state['p1']['action'] == 'grenade' or state['p2']['action'] == 'grenade':
                         vizData = "uncollected"
@@ -333,6 +325,9 @@ class Client(threading.Thread):
                                     state = game_engine.resetValues(state)
                                     vis_send_buffer.put_nowait(state)
                                     mqtt_p.publish()
+                                    
+                    if not self.accepted:
+                        state = game_engine.resetValues(state)
                     input_state(state)
                     
                     if self.accepted:
@@ -517,13 +512,12 @@ if __name__ == "__main__":
     AI_detector2 = AIDetector(2)
     AI_detector2.start()
 
-
     # start thread for receiving from laptop
-    # u_server1 = Server(int(port_server1),1)
-    # u_server1.start()
+    u_server1 = Server(int(port_server1),1)
+    u_server1.start()
 
-    # u_server2 = Server(int(port_server2),2)
-    # u_server2.start()
+    u_server2 = Server(int(port_server2),2)
+    u_server2.start()
 
     # AI_detector = AIDetector()
     # AI_detector.start()
