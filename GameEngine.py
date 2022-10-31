@@ -16,7 +16,7 @@ class GameEngine(threading.Thread):
 
         self.end_time = datetime.now()
         
-        print('[Game Engine: STARTED] \n\n')
+        print('[Game Engine: STARTED]')
     
     def updateFromEval(self, correctedState):
         self.player_state.update(correctedState)
@@ -24,8 +24,11 @@ class GameEngine(threading.Thread):
         self.p2 = Player(self.player_state['p2'])
 
     def performAction(self, action, player_num=1):
-        print('[Game Engine] Received action:', action, 'from player', player_num)
-
+        if player_num == 1:
+            print("\033[35m", end="")
+        else:
+            print("\033[33m", end="")
+        
         # Version 0: Assume DEFINITE HITS
         if action == Actions.shoot:
             if player_num == 1:
@@ -34,17 +37,21 @@ class GameEngine(threading.Thread):
                 self.p2.shoot()
 
         elif action == Actions.vest2:
+            print("\033[35m", end="")
             self.p2.bulletDamage()
             self.p1.bullet_hit='yes'
         
         elif action == Actions.vest1:
+            print("\033[33m", end="")
             self.p1.bulletDamage()
             self.p2.bullet_hit='yes'
 
         elif action == Actions.grenade1:
+            print("\033[35m", end="")
             self.p2.grenadeDamage()
         
         elif action == Actions.grenade2:
+            print("\033[33m", end="")
             self.p1.grenadeDamage()
 
         elif action == Actions.shield:
@@ -73,6 +80,8 @@ class GameEngine(threading.Thread):
 
         self.player_state['p1'] = self.p1.__dict__
         self.player_state['p2'] = self.p2.__dict__
+
+        print('[Game Engine] Performed action:', action, 'by player', player_num, end="\033[0m\n")
 
         return self.player_state
     
@@ -160,25 +169,33 @@ class GameEngine(threading.Thread):
         self.player_state['p2'] = self.p2.__dict__
     
     def prepForEval(self, state, player_num, actionSucess):
-        for k in self.non_eval_keys:
-            for p in ['p1', 'p2']:
-                state[p].pop(k)
-        if not actionSucess:
-            if player_num == 1:
-                state['p1']['action'] = state['p1']['action'][5:]
-            elif player_num == 2:
-                state['p2']['action'] = state['p1']['action'][5:]
+        for p in ['p1', 'p2']:
+            if state[p]['action'][:5] == "fail_":
+                print("REMOVING FAIL from ", p, state[p]['action'])
+                state[p]['action'] = state[p]['action'][5:]
+                print("NEW action of ", p, state[p]['action'])
+
+            try:
+                for k in self.non_eval_keys:
+                    state[p].pop(k)
+            except Exception as e:
+                print(e)
+        print("[GAME_ENGINE] State After Prep: \n", state)
+        # if not actionSucess:
+        #     if player_num == 1:
+        #         state['p1']['action'] = state['p1']['action'][5:]
+        #     elif player_num == 2:
+        #         state['p2']['action'] = state['p1']['action'][5:]
 
         # self.player_state['p1'] = self.p1.__dict__
         # self.player_state['p2'] = self.p2.__dict__
         return state
     
     def resetValues(self, state):
-        # for k in self.non_eval_keys:
-        # state['p1'].update(self.default_non_eval_pairs)
-        # state['p2'].update(self.default_non_eval_pairs)
-        state['p1']['action'] = 'none'
-        state['p2']['action'] = 'none'
-        state['p1']['bullet_hit'] = 'no'
-        state['p2']['bullet_hit'] = 'no'
+        state['p1'].update(self.default_non_eval_pairs)
+        state['p2'].update(self.default_non_eval_pairs)
+        # state['p1']['action'] = 'none'
+        # state['p2']['action'] = 'none'
+        # state['p1']['bullet_hit'] = 'no'
+        # state['p2']['bullet_hit'] = 'no'
         return state
