@@ -103,7 +103,7 @@ class GameEngine(threading.Thread):
             if watchState['num_shield'] > 0 and not (watchState['shield_time'] > 0 and watchState['shield_time'] <= 10):
                 watchState['num_shield'] -= 1
                 watchState['shield_time'] = 10
-                watchState['shield_health'] = 20
+                watchState['shield_health'] = 30
                 actionSucess = True
                 self.end_time = datetime.now()+timedelta(seconds=10)
 
