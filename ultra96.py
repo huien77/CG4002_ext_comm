@@ -55,7 +55,9 @@ vest_buffer = queue.Queue()
 # internal_lock = threading.Lock()
 # eval server buffer
 eval_buffer = queue.Queue()
+
 eval_lock = threading.Lock()
+eval_store_q = queue.Queue()
 
 # eval_lock = threading.Lock()
 # receive from visualizer buffer
@@ -334,11 +336,12 @@ class Client(threading.Thread):
                 try:
                     state_read, player_num = eval_buffer.get_nowait()
 
+                    if state_read[enemy_player[player_num-1]]['action'] == 'none':
+                        break
+
                     print("State:", state_read)
                     print("Player:", player_num)
-
                     state, actionSucess = game_engine.runLogic(state_read, player_num)
-
                     vis_send_buffer.put_nowait(state)
                     mqtt_p.publish()
 
@@ -361,70 +364,75 @@ class Client(threading.Thread):
                         for p in enemy_player:
                             player_hp[p]=state[p]['hp']
                     print("", end="\033[0m\n")
+                    eval_store_q.put_nowait("start")
                                     
                     # if not self.accepted:
                     #     state = game_engine.resetValues(state)
                     # input_state(state)
                     if self.accepted:
-                        eval_lock.acquire()
-                        print("\033[38mReceived Buffer: ", self.received_actions, "\nEvalStore: \n", self.evalStore)
-                        if not self.received_actions[player_num - 1]:
-                            #Store other player action
-                            if player_num == 1:
-                                enemy=1
-                            else:
-                                enemy=0
-                            preserved_action = self.evalStore.get(enemy_player[enemy]).get('action')
-                            print("PRESERVED ACTION: Player: ", enemy_player[enemy], preserved_action, "playerHP:", player_hp)
-                            
-                            for p in enemy_player:
-                                if state_read[p]['action'][:5] == "fail_":
-                                    self.evalStore[p]['action'] = state_read[p]['action'][5:]
+                        if (eval_store_q.qsize() > 0):
+                            eval_store_q.get_nowait()
+                            print("\033[38mReceived Buffer: ", self.received_actions, "\nEvalStore: \n", self.evalStore)
+                            if not self.received_actions[player_num - 1]:
+                                eval_lock.acquire()
+                                #Store other player action
+                                if player_num == 1:
+                                    enemy=1
                                 else:
-                                    self.evalStore[p]['action'] = state_read[p]['action']
-                                self.evalStore[p]['hp']=player_hp[p]
+                                    enemy=0
+                                preserved_action = self.evalStore.get(enemy_player[enemy]).get('action')
+                                print("PRESERVED ACTION: Player: ", enemy_player[enemy], preserved_action, "playerHP:", player_hp)
+                                
+                                for p in enemy_player:
+                                    if state_read[p]['action'][:5] == "fail_":
+                                        self.evalStore[p]['action'] = state_read[p]['action'][5:]
+                                    else:
+                                        self.evalStore[p]['action'] = state_read[p]['action']
+                                    self.evalStore[p]['hp']=player_hp[p]
 
-                            print("####################################################################" * 4)
-                            print("EVAL Pre Logic: ", self.evalStore)
+                                print("####################################################################" * 4)
+                                print("EVAL Pre Logic: ", self.evalStore)
 
-                            self.evalStore, actionSucess = game_engine.runLogic(self.evalStore, player_num)
+                                self.evalStore, actionSucess = game_engine.runLogic(self.evalStore, player_num)
 
-                            print()
-                            print("Eval Post Logic: ", self.evalStore)
+                                print()
+                                print("Eval Post Logic: ", self.evalStore)
 
-                            self.evalStore[enemy_player[enemy]]['action'] = preserved_action
+                                self.evalStore[enemy_player[enemy]]['action'] = preserved_action
 
-                            print("\nPost Preservation: ", self.evalStore)
-                            temp = game_engine.prepForEval(self.evalStore, player_num, actionSucess)
+                                print("\nPost Preservation: ", self.evalStore)
+                                temp = game_engine.prepForEval(self.evalStore, player_num, actionSucess)
 
-                            self.evalStore.update(temp)
-                            self.received_actions[player_num - 1] = True
+                                self.evalStore.update(temp)
+                                self.received_actions[player_num - 1] = True
 
-                            print("RECEIVED ACTIONS:", self.received_actions)
-                            if self.received_actions[0] and self.received_actions[1]:
-                                print("\033[36m Sending to eval:", self.evalStore)
-                                self.send_data(self.evalStore)
+                                print("RECEIVED ACTIONS:", self.received_actions)
+                                if self.received_actions[0] and self.received_actions[1]:
+                                    print("\033[36m Sending to eval:", self.evalStore)
+                                    self.send_data(self.evalStore)
 
-                                # receive expected state from eval server
-                                expected_state = self.receive()
-                                print("\n\tReceived from eval:\n", expected_state, end="\033[0m\n")
-                                expected_state = json.loads(expected_state)
+                                    # receive expected state from eval server
+                                    expected_state = self.receive()
+                                    print("\n\tReceived from eval:\n", expected_state, end="\033[0m\n")
+                                    expected_state = json.loads(expected_state)
 
-                                # Game State timer check in case of wrong detection of shield
-                                game_engine.checkShieldTimer(expected_state, state)
+                                    # Game State timer check in case of wrong detection of shield
+                                    game_engine.checkShieldTimer(expected_state, state)
 
-                                self.evalStore.update(expected_state)
-                                player_hp['p1'] = expected_state['p1']['hp']
-                                player_hp['p2'] = expected_state['p2']['hp']
-                                expected_state = game_engine.resetValues(expected_state)
-                                input_state(expected_state)
+                                    self.evalStore.update(expected_state)
+                                    player_hp['p1'] = expected_state['p1']['hp']
+                                    player_hp['p2'] = expected_state['p2']['hp']
+                                    expected_state = game_engine.resetValues(expected_state)
+                                    input_state(expected_state)
 
-                                print("\n\t\tLatest EvalsStore: ", self.evalStore)
+                                    print("\n\t\tLatest EvalsStore: ", self.evalStore)
 
-                                # Reset of player eval server receivers
-                                self.received_actions = [False, ONE_PLAYER_MODE]
-                        print(end="\033[0m")
-                        eval_lock.release()
+                                    # Reset of player eval server receivers
+                                    self.received_actions = [False, ONE_PLAYER_MODE]
+                                    eval_store_q.queue.clear()
+                                eval_lock.release()
+
+                            print(end="\033[0m\n")
                     state = game_engine.resetValues(state)
                     input_state(state)
 
