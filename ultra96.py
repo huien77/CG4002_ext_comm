@@ -93,12 +93,14 @@ class AIDetector(threading.Thread):
         last_detected = "none"
         
         # start game engine
+        """
         game_engine = GameEngine(curr_state)
         game_engine.start()
+        """
 
-        # start ultra96 client to eval server thread
-        my_client = Client(ip_addr, port_num, group_id, secret_key, game_engine)
-        my_client.start()
+        # # start ultra96 client to eval server thread
+        # my_client = Client(ip_addr, port_num, group_id, secret_key, game_engine)
+        # my_client.start()
         
         while action != "logout":
             # Update local game state from eval_server
@@ -106,9 +108,13 @@ class AIDetector(threading.Thread):
 
             # Read buffers and perform actions
             if self.player_num == 1:
-                if IMU_buffer.qsize() > 0:
+                while IMU_buffer.qsize() > 0:
+                    # print("\r", IMU_buffer.qsize())
                     try:
                         data = IMU_buffer.get_nowait()
+                        if IMU_buffer.qsize() >= 20:
+                            print("\r",IMU_buffer.qsize(), end="")
+                            IMU_buffer.queue.clear()
                         # player_num = data["P"]
                         action = self.predict_action(data["V"])
                         if (action != "idle"):
@@ -123,13 +129,17 @@ class AIDetector(threading.Thread):
                         # print(e)
                         pass
             elif self.player_num == 2:
-                if IMU_buffer2.qsize() > 0:
+                while IMU_buffer2.qsize() > 0:
+                    # print("\r", IMU_buffer.qsize())
                     try:
                         data = IMU_buffer2.get_nowait()
+                        if IMU_buffer2.qsize() >= 20:
+                            print("\r      \t",IMU_buffer.qsize(), end="")
+                            IMU_buffer2.queue.clear()
                         # player_num = data["P"]
                         action = self.predict_action(data["V"])
                         if (action != "idle"):
-                            print("\033[0;33m\n\n\nPredicted:\t", action, "from player\t", self.player_num, "\t\tPrev_detect:", last_detected, end="\033[0m")
+                            print("\033[0;33m\n\n\nPredicted:\t", action, "from player\t", self.player_num, "\t\tPrev_detect:", last_detected, end="\033[0m\n")
                             last_detected = action
 
                             temp = game_engine.performAction(action, self.player_num)
@@ -141,8 +151,9 @@ class AIDetector(threading.Thread):
 
             if GUN_buffer.qsize() > 0:
                 try:
+                    print()
                     player_num = GUN_buffer.get_nowait()
-                    temp = game_engine.performAction('shoot', self.player_num)
+                    temp = game_engine.performAction('shoot', player_num)
                     
                     # Check bullet hit of opponent
                     if vest_buffer.qsize() > 0:
@@ -154,7 +165,7 @@ class AIDetector(threading.Thread):
                     
                     # this output is needed by eval server
                     input_state(temp)
-                    eval_buffer.put_nowait([temp, self.player_num])
+                    eval_buffer.put_nowait([temp, player_num])
                 except Exception as e:
                     pass
         
@@ -180,6 +191,7 @@ class MQTTClient():
 
     def receive(self):
         def on_message(client, data, message):
+            print("\033[0;34mPutting VISRECV!!! \033[0m", end="")
             vis_recv_buffer.put_nowait(message.payload.decode())
             print("[MQTT] Received: ", message.payload.decode())
 
@@ -204,14 +216,13 @@ class Client(threading.Thread):
     evalStore = {}
     evalStore.update(curr_state)
     
-    def __init__(self, ip_addr, port_num, group_id, secret_key, game_engine):
+    def __init__(self, ip_addr, port_num, group_id, secret_key):
         super().__init__()
         # set up a TCP/IP socket to the port number
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_address = (ip_addr, port_num)
         self.secret_key = secret_key
         self.group_id = group_id
-        self.game_engine = game_engine
 
         try:
             # start connection
@@ -296,30 +307,33 @@ class Client(threading.Thread):
 
                     print("PRESERVED ACTIONS:", preserved_action1, preserved_action2)
 
-                    state, actionSucess = self.game_engine.runLogic(state, player_num)
+                    state, actionSucess = game_engine.runLogic(state, player_num)
 
                     vis_send_buffer.put_nowait(state)
                     mqtt_p.publish()
-                    if not self.accepted:
-                        state = self.game_engine.resetValues(state)
-                    input_state(state)
 
                     if state['p1']['action'] == 'grenade' or state['p2']['action'] == 'grenade':
-                        if vis_recv_buffer.qsize() > 0:
+                        vizData = "uncollected"
+                        while vizData == "uncollected":
                             # visualizer sends player that is hit by grenade
-                            data = vis_recv_buffer.get_nowait()
-                            print("\rPointed at Picture!! Should HIT!")
-                            if data != 'no':
-                                print("Weird SHit Happened")
-                                state = self.game_engine.performAction(data)
-                                state = self.game_engine.resetValues(state)
-                                vis_send_buffer.put_nowait(state)
-                                mqtt_p.publish()
+                            if vis_recv_buffer.qsize() > 0:
+                                vizData = vis_recv_buffer.get_nowait()
+                                print("\rPointed at Picture!! Should HIT!")
+                                if vizData != 'no':
+                                    print("Weird SHit Happened")
+                                    state = game_engine.performAction(vizData)
+                                    state = game_engine.resetValues(state)
+                                    vis_send_buffer.put_nowait(state)
+                                    mqtt_p.publish()
+                                    
+                    if not self.accepted:
+                        state = game_engine.resetValues(state)
+                    input_state(state)
                     
                     if self.accepted:
                         if not self.received_actions[player_num - 1]:
                             self.received_actions[player_num - 1] = True
-                            state = self.game_engine.prepForEval(state, player_num, actionSucess)
+                            state = game_engine.prepForEval(state, player_num, actionSucess)
                             #Store other player action
                             # enemy_player = ['p1', 'p2']
                             
@@ -351,10 +365,10 @@ class Client(threading.Thread):
                                 expected_state = json.loads(expected_state)
 
                                 # Game State timer check in case of wrong detection of shield
-                                self.game_engine.checkShieldTimer(expected_state, state)
+                                game_engine.checkShieldTimer(expected_state, state)
 
                                 self.evalStore.update(expected_state)
-                                expected_state = self.game_engine.resetValues(expected_state)
+                                expected_state = game_engine.resetValues(expected_state)
                                 input_state(expected_state)
 
                                 print("\n\t\tLatest EvalsStore: ", self.evalStore)
@@ -364,7 +378,7 @@ class Client(threading.Thread):
 
                             else: 
                                 # print("\n\t\tSKIPPED Evals: ", self.evalStore)
-                                state = self.game_engine.resetValues(state)
+                                state = game_engine.resetValues(state)
                                 input_state(state)
 
                 except Exception as e:
@@ -438,8 +452,8 @@ class Server(threading.Thread):
 
     def run(self):
         self.setup_connection()
-        AI_detector = AIDetector(self.player_num)
-        AI_detector.start()
+        # AI_detector = AIDetector(self.player_num, game_engine)
+        # AI_detector.start()
 
         while True:
             try:
@@ -484,6 +498,19 @@ if __name__ == "__main__":
     port_num = int(sys.argv[4])
     port_server1 = sys.argv[5]
     port_server2 = sys.argv[6]
+
+    # start ultra96 client to eval server thread
+    my_client = Client(ip_addr, port_num, group_id, secret_key)
+    my_client.start()
+
+    # NOTE POSSIBLE BUG POINT !!!!!
+    game_engine = GameEngine(curr_state)
+    game_engine.start()
+
+    AI_detector1 = AIDetector(1)
+    AI_detector1.start()
+    AI_detector2 = AIDetector(2)
+    AI_detector2.start()
 
     # start thread for receiving from laptop
     u_server1 = Server(int(port_server1),1)
