@@ -99,10 +99,11 @@ class GameEngine(threading.Thread):
         watchedAction = watchState['action']
 
         if watchedAction == "shield":
-            # There are still shield and no shields are active
+            # Check that there are shields and no shields are active
             if watchState['num_shield'] > 0 and not (watchState['shield_time'] > 0 and watchState['shield_time'] <= 10):
                 watchState['num_shield'] -= 1
                 watchState['shield_time'] = 10
+                watchState['shield_health'] = 20
                 actionSucess = True
                 self.end_time = datetime.now()+timedelta(seconds=10)
 

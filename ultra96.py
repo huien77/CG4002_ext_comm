@@ -378,11 +378,23 @@ class Client(threading.Thread):
                             print("PRESERVED ACTION: Player: ", enemy_player[enemy], preserved_action, "playerHP:", player_hp)
                             
                             for p in enemy_player:
-                                self.evalStore[p]['action'] = state_read[p]['action']
+                                if state_read[p]['action'][:5] == "fail_":
+                                    self.evalStore[p]['action'] = state_read[p]['action'][5:]
+                                else:
+                                    self.evalStore[p]['action'] = state_read[p]['action']
                                 self.evalStore[p]['hp']=player_hp[p]
+
+                            print("####################################################################" * 4)
+                            print("EVAL Pre Logic: ", self.evalStore)
+
                             self.evalStore, actionSucess = game_engine.runLogic(self.evalStore, player_num)
 
+                            print()
+                            print("Eval Post Logic: ", self.evalStore)
+
                             self.evalStore[enemy_player[enemy]]['action'] = preserved_action
+
+                            print("\nPost Preservation: ", self.evalStore)
                             temp = game_engine.prepForEval(self.evalStore, player_num, actionSucess)
 
                             self.evalStore.update(temp)
