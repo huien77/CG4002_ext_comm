@@ -13,16 +13,39 @@ class GameEngine():
         self.p1 = Player(self.player_state['p1'])
         self.p2 = Player(self.player_state['p2'])
 
-        self.end_time = datetime.now()
+        self.eval_state = player_state
+        self.e1 = Player(self.player_state['p1'])
+        self.e2 = Player(self.player_state['p2'])
+
+        self.end_time1 = datetime.now()
+        self.end_time2 = datetime.now()
         
         print('[Game Engine: STARTED]')
     
     def updateFromEval(self, correctedState):
         self.player_state.update(correctedState)
+        self.eval_state.update(correctedState)
+
         self.p1 = Player(self.player_state['p1'])
         self.p2 = Player(self.player_state['p2'])
 
-    def performAction(self, action, player_num=1):
+        self.e1 = Player(self.eval_state['p1'])
+        self.e2 = Player(self.eval_state['p2'])
+
+    def updatePlayerState(self, curr_state):
+        self.player_state.update(curr_state)
+
+        self.p1 = Player(self.player_state['p1'])
+        self.p2 = Player(self.player_state['p2'])
+
+    def performAction(self, action, player_num=1, eval=False):
+        if eval:
+            main1 = self.e1
+            main2 = self.e2
+        else:
+            main1 = self.p1
+            main2 = self.p2
+
         if player_num == 1:
             print("\033[35m", end="")
         else:
@@ -31,60 +54,69 @@ class GameEngine():
         # Version 0: Assume DEFINITE HITS
         if action == Actions.shoot:
             if player_num == 1:
-                self.p1.shoot()
+                main1.shoot()
             else:
-                self.p2.shoot()
+                main2.shoot()
 
         elif action == Actions.vest2:
             print("\033[35m", end="")
-            self.p2.bulletDamage()
-            # self.p1.bullet_hit='yes'
+            main2.bulletDamage()
         
         elif action == Actions.vest1:
             print("\033[33m", end="")
-            self.p1.bulletDamage()
-            # self.p2.bullet_hit='yes'
+            main1.bulletDamage()
 
         elif action == Actions.grenade1:
             print("\033[35m", end="")
-            self.p2.grenadeDamage()
+            main2.grenadeDamage()
         
         elif action == Actions.grenade2:
             print("\033[33m", end="")
-            self.p1.grenadeDamage()
+            main1.grenadeDamage()
 
         elif action == Actions.shield:
             if player_num == 1:
-                self.p1.shield()
+                main1.shield()
             else:
-                self.p2.shield()
+                main2.shield()
 
         elif action == Actions.grenade:
             if player_num == 1:
-                self.p1.grenade()
+                main1.grenade()
             else:
-                self.p2.grenade()
+                main2.grenade()
 
         elif action == Actions.reload:
             if player_num == 1:
-                self.p1.reload()
+                main1.reload()
             else:
-                self.p2.reload()
+                main2.reload()
 
         elif action == Actions.logout:
             if player_num == 1:
-                self.p1.logout()
+                main1.logout()
             else:
-                self.p2.logout()
-
-        self.player_state['p1'] = self.p1.__dict__
-        self.player_state['p2'] = self.p2.__dict__
-
+                main2.logout()
         print('[Game Engine] Performed action:', action, 'by player', player_num, end="\033[0m\n")
+        if eval:
+            self.e1 = main1
+            self.e2 = main2
+            self.eval_state['p1'] = main1.__dict__
+            self.eval_state['p2'] = main2.__dict__
+            return self.eval_state
+        else:
+            self.p1 = main1
+            self.p2 = main2
+            self.player_state['p1'] = main1.__dict__
+            self.player_state['p2'] = main2.__dict__
+            return self.player_state
 
-        return self.player_state
-    
-    def runLogic(self, state, player_num):
+    def runLogic(self, player_num, eval=False):
+        if eval:
+            state = self.eval_state
+        else:
+            state = self.player_state
+
         if player_num == 1:
             player = 'p1'
         elif player_num == 2:
@@ -104,12 +136,18 @@ class GameEngine():
                 watchState['shield_time'] = 10
                 watchState['shield_health'] = 30
                 actionSucess = True
-                self.end_time = datetime.now()+timedelta(seconds=10)
+                if player_num == 1:
+                    self.end_time1 = datetime.now()+timedelta(seconds=10)
+                else:
+                    self.end_time2 = datetime.now()+timedelta(seconds=10)
 
         # This function checks whenever action is not shield for the shield TIMER
         # Not called when shield is instantiated for eval server
-        elif (watchState['shield_time'] > 0):                        
-            time_diff = self.end_time - datetime.now()
+        elif (watchState['shield_time'] > 0):
+            if player_num == 1:
+                time_diff = self.end_time1 - datetime.now()
+            else:
+                time_diff = self.end_time2 - datetime.now()
             if time_diff.total_seconds() <= 0:
                 watchState['shield_time'] = 0
                 watchState['shield_health'] = 0
@@ -138,12 +176,16 @@ class GameEngine():
             watchedAction = fail+watchedAction
             watchState['action'] = watchedAction
 
-        return state, actionSucess
+        return state
 
-    def checkShieldTimer(self, expected_state, state):
-        if expected_state['p1']['action']=="shield":
-            if expected_state['p1']['num_shield'] > 0 and not (state['p1']['shield_time'] > 0 and state['p1']['shield_time'] <= 10):
-                self.end_time = datetime.now()+timedelta(seconds=10)
+    def checkShieldTimer(self, expected_state):
+        for p in ['p1', 'p2']:
+            if expected_state[p]['action']=="shield":
+                if expected_state[p]['num_shield'] > 0 and not (self.eval_state[p]['shield_time'] > 0 and self.eval_state[p]['shield_time'] <= 10):
+                    if ['p1', 'p2'].index(p) == 1:
+                        self.end_time1 = datetime.now()+timedelta(seconds=10)
+                    else:
+                        self.end_time2 = datetime.now()+timedelta(seconds=10)
     
     def getKey_Values(self, state, playerNum, sKey):
         if playerNum == 0:
@@ -168,22 +210,27 @@ class GameEngine():
         self.player_state['p1'] = self.p1.__dict__
         self.player_state['p2'] = self.p2.__dict__
     
-    def prepForEval(self, state, player_num, actionSucess):
+    def prepForEval(self):
         for p in ['p1', 'p2']:
-            if state[p]['action'][:5] == "fail_":
-                print("REMOVING FAIL from ", p, state[p]['action'])
-                state[p]['action'] = state[p]['action'][5:]
-                print("NEW action of ", p, state[p]['action'])
+            if self.eval_state[p]['action'][:5] == "fail_":
+                print("REMOVING FAIL from ", p, self.eval_state[p]['action'])
+                self.eval_state[p]['action'] = self.eval_state[p]['action'][5:]
+                print("NEW action of ", p, self.eval_state[p]['action'])
 
-            try:
-                for k in self.non_eval_keys:
-                    state[p].pop(k)
-            except Exception as e:
-                print(e)
-        print("[GAME_ENGINE] State After Prep: \n", state)
-        return state
+        print("[GAME_ENGINE] State After Prep: \n", self.eval_state)
+        return self.eval_state
     
-    def resetValues(self, state):
-        state['p1'].update(self.default_non_eval_pairs)
-        state['p2'].update(self.default_non_eval_pairs)
-        return state
+    def resetValues(self, eval=False):
+        if eval:
+            self.eval_state['p1'].update(self.default_non_eval_pairs)
+            self.eval_state['p2'].update(self.default_non_eval_pairs)
+        else:
+            self.player_state['p1'].update(self.default_non_eval_pairs)
+            self.player_state['p2'].update(self.default_non_eval_pairs)
+            return self.player_state
+    
+    def readGameState(self, eval=False):
+        if eval:
+            return self.eval_state
+        else:
+            return self.player_state

@@ -104,7 +104,7 @@ class AIDetector(threading.Thread):
                 
         while action != "logout":
             # Update local game state from eval_server
-            game_engine.updateFromEval(curr_state)
+            game_engine.updatePlayerState(curr_state)
 
             # Read buffers and perform actions
             if self.player_num == 1:
@@ -145,7 +145,7 @@ class AIDetector(threading.Thread):
                         if vest_buffer.qsize() > 0:
                             vest_buffer.get_nowait()
                             vest_buffer.queue.clear()
-                            game_engine.performAction('bullet1', 1)
+                            temp = game_engine.performAction('bullet1', 1)
                             eval_damage.put_nowait(['bullet1', 1])
                         
                         # this output is needed by eval server
@@ -194,7 +194,7 @@ class AIDetector(threading.Thread):
                         if vest_buffer.qsize() > 0:
                             vest_buffer.get_nowait()
                             vest_buffer.queue.clear()
-                            game_engine.performAction('bullet2', 2)
+                            temp = game_engine.performAction('bullet2', 2)
                             eval_damage.put_nowait(['bullet2', 2])
                         
                         # this output is needed by eval server
@@ -336,11 +336,11 @@ class Client(threading.Thread):
 
                     print("State:", state_read)
                     print("Player:", player_num)
-                    state, actionSucess = game_engine.runLogic(state_read, player_num)
-                    vis_send_buffer.put_nowait(state)
+                    state_pubs = game_engine.runLogic(player_num)
+                    vis_send_buffer.put_nowait(state_pubs)
                     mqtt_p.publish()
 
-                    if state['p1']['action'] == 'grenade' or state['p2']['action'] == 'grenade':
+                    if state_pubs['p1']['action'] == 'grenade' or state_pubs['p2']['action'] == 'grenade':
                         vizData = "uncollected"
                         trying = 0
                         while vizData == "uncollected":
@@ -349,9 +349,9 @@ class Client(threading.Thread):
                                 vizData = vis_recv_buffer.get_nowait()
                                 if vizData != 'no':
                                     print("\rPointed at Picture!! Should HIT! Tried {} times".format(trying), end="\033[0m\n")
-                                    state = game_engine.performAction(vizData)
-                                    state = game_engine.resetValues(state)
-                                    vis_send_buffer.put_nowait(state)
+                                    game_engine.performAction(vizData)
+                                    state_pubs = game_engine.resetValues()
+                                    vis_send_buffer.put_nowait(state_pubs)
                                     mqtt_p.publish()
                             trying += 1
                             if trying > 200000:
@@ -362,9 +362,12 @@ class Client(threading.Thread):
                     eval_store_q.put_nowait("start")
                                     
                     if self.accepted:
+                        statedmgCheck = game_engine.readGameState(True)
+                        if statedmgCheck[_players[player_num-1]]['action'] in ['grenade', 'shoot']:
+                            atacktype, attacker = eval_damage.get_nowait()
                         if (eval_store_q.qsize() > 0):
                             eval_store_q.get_nowait()
-                            print("\033[38mReceived Buffer: ", self.received_actions, "\nEvalStore: \n", self.evalStore)
+                            print("\033[38mReceived Buffer: ", self.received_actions, "\nEvalStore: \n", evalStore)
                             if not self.received_actions[player_num - 1]:
                                 eval_lock.acquire()
                                 
@@ -373,41 +376,40 @@ class Client(threading.Thread):
                                     enemy=1
                                 else:
                                     enemy=0
-                                preserved_action = self.evalStore.get(_players[enemy]).get('action')
+                                evalStore = game_engine.readGameState(True)
+                                preserved_action = evalStore.get(_players[enemy]).get('action')
                                 print("PRESERVED ACTION: Player: ", _players[enemy], preserved_action)
                                 
                                 for p in _players:
                                     if state_read[p]['action'][:5] == "fail_":
-                                        self.evalStore[p]['action'] = state_read[p]['action'][5:]
+                                        evalStore[p]['action'] = state_read[p]['action'][5:]
                                     else:
-                                        self.evalStore[p]['action'] = state_read[p]['action']
+                                        evalStore[p]['action'] = state_read[p]['action']
 
                                 print("####################################################################" * 4)
-                                print("EVAL Pre Logic: ", self.evalStore)
+                                print("EVAL Pre Logic: ", evalStore)
 
                                 # Gamestate to send (First Action of each player after each Eval)
-                                self.evalStore, actionSucess = game_engine.runLogic(self.evalStore, player_num)
+                                evalStore = game_engine.runLogic(player_num, eval=True)
                                 # Correcting HP based on action that matter
-                                if self.evalStore[_players[player_num-1]]['action'] in ['grenade', 'shoot']:
-                                    game_engine.updateFromEval(self.evalStore)
-                                    atacktype, attacker = eval_damage.get_nowait()
-                                    self.evalStore = game_engine.performAction(atacktype, attacker)
+                                if evalStore[_players[player_num-1]]['action'] in ['grenade', 'shoot']:
+                                    evalStore = game_engine.performAction(atacktype, attacker, eval=True)
 
                                 print()
-                                print("Eval Post Logic: ", self.evalStore)
+                                print("Eval Post Logic: ", evalStore)
 
-                                self.evalStore[_players[enemy]]['action'] = preserved_action
+                                evalStore[_players[enemy]]['action'] = preserved_action
 
-                                print("\nPost Preservation: ", self.evalStore)
-                                temp = game_engine.prepForEval(self.evalStore, player_num, actionSucess)
+                                print("\nPost Preservation: ", evalStore)
+                                eval_to_send = game_engine.prepForEval()
 
-                                self.evalStore.update(temp)
+                                evalStore.update(eval_to_send)
                                 self.received_actions[player_num - 1] = True
 
                                 print("RECEIVED ACTIONS:", self.received_actions)
                                 if self.received_actions[0] and self.received_actions[1]:
-                                    print("\033[36m Sending to eval:", self.evalStore)
-                                    self.send_data(self.evalStore)
+                                    print("\033[36m Sending to eval:", evalStore)
+                                    self.send_data(eval_to_send)
 
                                     # receive expected state from eval server
                                     expected_state = self.receive()
@@ -415,22 +417,27 @@ class Client(threading.Thread):
                                     expected_state = json.loads(expected_state)
 
                                     # Game State timer check in case of wrong detection of shield
-                                    game_engine.checkShieldTimer(expected_state, state)
+                                    game_engine.checkShieldTimer(expected_state)
 
-                                    self.evalStore.update(expected_state)
-                                    expected_state = game_engine.resetValues(expected_state)
+                                    evalStore.update(expected_state)
+                                    expected_state = game_engine.resetValues(expected_state, True)
+                                    game_engine.updateFromEval(expected_state)
                                     input_state(expected_state)
 
-                                    print("\n\t\tLatest EvalsStore: ", self.evalStore)
+                                    print("\n\t\tLatest EvalsStore: ", game_engine.readGameState(True))
 
                                     # Reset of player eval server receivers
                                     self.received_actions = [False, ONE_PLAYER_MODE]
                                     eval_store_q.queue.clear()
                                 eval_lock.release()
+                            
+                            else:
+                                if eval_damage.qsize() > 0 :
+                                    __, __ = eval_damage.get_nowait()
 
                             print(end="\033[0m\n")
-                    state = game_engine.resetValues(state)
-                    input_state(state)
+                    state_pubs = game_engine.resetValues(state_pubs)
+                    input_state(state_pubs)
 
                 except Exception as e:
                     print("\033[31mSomething went Terribly Wrong:\n", e, end="\033[0m\n\n\n")
@@ -504,9 +511,6 @@ class Server(threading.Thread):
 
     def run(self):
         self.setup_connection()
-        # AI_detector = AIDetector(self.player_num, game_engine)
-        # AI_detector.start()
-
         while True:
             try:
                 msg = self.receive()
