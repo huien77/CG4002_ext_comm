@@ -8,37 +8,22 @@ class Player:
         self.shield_health = state['shield_health']
         self.num_shield = state['num_shield']
         self.num_deaths = state['num_deaths']
-        self.bullet_hit = 'no'
+        # self.bullet_hit = 'no'
 
 #NOTE ammo needs fixing
 
     def shoot(self):
-        # if self.bullets > 0:
         self.action = "shoot"
-        # if self.bullets > 0:
-        #     self.bullets -= 1
-        # else:
-        #     self.action = 'none'
 
     def grenade(self):
-        # if self.grenades > 0:
         self.action = "grenade"
-        # if self.grenades > 0:
-        #     self.grenades -= 1
-        # else:
-        #     self.action = 'none'
 
     def shield(self):
-        # if self.num_shield > 0:
         self.action = "shield"
         self.shield_health = 30
-        # if self.num_shield > 0:
-        #     self.num_shield -= 1
-        #     self.shield_time = 10
     
     def reload(self):
         self.action = "reload"
-        # self.bullets = 6
 
     def takeDamage(self, damage):
         if self.shield_health > 0:

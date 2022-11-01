@@ -4,10 +4,10 @@ from PlayerState import Player
 from datetime import datetime
 from datetime import timedelta
 
-class GameEngine(threading.Thread):
+class GameEngine():
     # KEYS we dont need to send to Eval Server
-    non_eval_keys = ['bullet_hit']
-    default_non_eval_pairs = [('bullet_hit', 'no'), ('action','none')]
+    # non_eval_keys = ['bullet_hit']
+    default_non_eval_pairs = [('action','none')]
     def __init__(self, player_state):
         super().__init__()
         self.player_state = player_state
@@ -39,12 +39,12 @@ class GameEngine(threading.Thread):
         elif action == Actions.vest2:
             print("\033[35m", end="")
             self.p2.bulletDamage()
-            self.p1.bullet_hit='yes'
+            # self.p1.bullet_hit='yes'
         
         elif action == Actions.vest1:
             print("\033[33m", end="")
             self.p1.bulletDamage()
-            self.p2.bullet_hit='yes'
+            # self.p2.bullet_hit='yes'
 
         elif action == Actions.grenade1:
             print("\033[35m", end="")
@@ -182,21 +182,9 @@ class GameEngine(threading.Thread):
             except Exception as e:
                 print(e)
         print("[GAME_ENGINE] State After Prep: \n", state)
-        # if not actionSucess:
-        #     if player_num == 1:
-        #         state['p1']['action'] = state['p1']['action'][5:]
-        #     elif player_num == 2:
-        #         state['p2']['action'] = state['p1']['action'][5:]
-
-        # self.player_state['p1'] = self.p1.__dict__
-        # self.player_state['p2'] = self.p2.__dict__
         return state
     
     def resetValues(self, state):
         state['p1'].update(self.default_non_eval_pairs)
         state['p2'].update(self.default_non_eval_pairs)
-        # state['p1']['action'] = 'none'
-        # state['p2']['action'] = 'none'
-        # state['p1']['bullet_hit'] = 'no'
-        # state['p2']['bullet_hit'] = 'no'
         return state

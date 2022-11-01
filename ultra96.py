@@ -51,6 +51,7 @@ GUN_buffer2 = queue.Queue()
 ACTION_buffer = queue.Queue()
 ACTION_buffer2 = queue.Queue()
 vest_buffer = queue.Queue()
+eval_damage = queue.Queue()
 
 # internal_lock = threading.Lock()
 # eval server buffer
@@ -115,7 +116,8 @@ class AIDetector(threading.Thread):
                             print("\r",IMU_buffer.qsize(), end="")
                             IMU_buffer.queue.clear()
                         action = self.predict_action(data["V"])
-                        ACTION_buffer.put_nowait(action)
+                        if (action != "idle"):
+                            ACTION_buffer.put_nowait(action)
                     except Exception as e:
                         print(e)
                         pass
@@ -123,13 +125,12 @@ class AIDetector(threading.Thread):
                 if ACTION_buffer.qsize() > 0:
                     try:
                         action = ACTION_buffer.get_nowait()
-                        if (action != "idle"):
-                            print("\033[0;35m\n\n\nPredicted:\t", action, "from player\t", self.player_num, "\t\tPrev_detect:", last_detected)
-                            last_detected = action
+                        print("\033[0;35m\n\n\nPredicted:\t", action, "from player\t", self.player_num, "\t\tPrev_detect:", last_detected)
+                        last_detected = action
 
-                            temp = game_engine.performAction(action, self.player_num)
-                            input_state(temp)
-                            eval_buffer.put_nowait([temp, self.player_num])
+                        temp = game_engine.performAction(action, self.player_num)
+                        input_state(temp)
+                        eval_buffer.put_nowait([temp, self.player_num])
                     except Exception as e:
                         print(e)
                         pass
@@ -144,10 +145,8 @@ class AIDetector(threading.Thread):
                         if vest_buffer.qsize() > 0:
                             vest_buffer.get_nowait()
                             vest_buffer.queue.clear()
-                            if player_num == 1:
-                                game_engine.performAction('bullet1', 1)
-                            else:
-                                game_engine.performAction('bullet2', 2)
+                            game_engine.performAction('bullet1', 1)
+                            eval_damage.put_nowait(['bullet1', 1])
                         
                         # this output is needed by eval server
                         input_state(temp)
@@ -164,7 +163,8 @@ class AIDetector(threading.Thread):
                             print("\t\t\r",IMU_buffer.qsize(), end="")
                             IMU_buffer2.queue.clear()
                         action = self.predict_action(data["V"])
-                        ACTION_buffer2.put_nowait(action)
+                        if action != "idle":
+                            ACTION_buffer2.put_nowait(action)
 
                     except Exception as e:
                         print(e)
@@ -173,13 +173,13 @@ class AIDetector(threading.Thread):
                 if ACTION_buffer2.qsize() > 0:
                     try:
                         action = ACTION_buffer2.get_nowait()
-                        if (action != "idle"):
-                            print("\033[0;33m\n\n\nPredicted:\t", action, "from player\t", self.player_num, "\t\tPrev_detect:", last_detected)
-                            last_detected = action
+                        # if (action != "idle"):
+                        print("\033[0;33m\n\n\nPredicted:\t", action, "from player\t", self.player_num, "\t\tPrev_detect:", last_detected)
+                        last_detected = action
 
-                            temp = game_engine.performAction(action, self.player_num)
-                            input_state(temp)
-                            eval_buffer.put_nowait([temp, self.player_num])
+                        temp = game_engine.performAction(action, self.player_num)
+                        input_state(temp)
+                        eval_buffer.put_nowait([temp, self.player_num])
                     except Exception as e:
                         print(e)
                         pass
@@ -194,10 +194,8 @@ class AIDetector(threading.Thread):
                         if vest_buffer.qsize() > 0:
                             vest_buffer.get_nowait()
                             vest_buffer.queue.clear()
-                            if player_num == 1:
-                                game_engine.performAction('bullet1', 1)
-                            else:
-                                game_engine.performAction('bullet2', 2)
+                            game_engine.performAction('bullet2', 2)
+                            eval_damage.put_nowait(['bullet2', 2])
                         
                         # this output is needed by eval server
                         input_state(temp)
@@ -327,16 +325,13 @@ class Client(threading.Thread):
         return msg
 
     def run(self):
-        # preserved_action1 = 'none'
-        # preserved_action2 = 'none'
-        enemy_player = ['p1', 'p2']
-        player_hp = {'p1': 100, 'p2':100}
+        _players = ['p1', 'p2']
         while True:
             while eval_buffer.qsize() > 0:
                 try:
                     state_read, player_num = eval_buffer.get_nowait()
 
-                    if state_read[enemy_player[player_num-1]]['action'] == 'none':
+                    if state_read[_players[player_num-1]]['action'] == 'none':
                         break
 
                     print("State:", state_read)
@@ -353,7 +348,7 @@ class Client(threading.Thread):
                             if vis_recv_buffer.qsize() > 0:
                                 vizData = vis_recv_buffer.get_nowait()
                                 if vizData != 'no':
-                                    print("\rPointed at Picture!! Should HIT!          Trying {} times".format(trying), end="\033[0m\n")
+                                    print("\rPointed at Picture!! Should HIT! Tried {} times".format(trying), end="\033[0m\n")
                                     state = game_engine.performAction(vizData)
                                     state = game_engine.resetValues(state)
                                     vis_send_buffer.put_nowait(state)
@@ -361,44 +356,47 @@ class Client(threading.Thread):
                             trying += 1
                             if trying > 200000:
                                 vizData='no'
-                        for p in enemy_player:
-                            player_hp[p]=state[p]['hp']
+                            eval_damage.put_nowait([vizData, player_num])
+                        
                     print("", end="\033[0m\n")
                     eval_store_q.put_nowait("start")
                                     
-                    # if not self.accepted:
-                    #     state = game_engine.resetValues(state)
-                    # input_state(state)
                     if self.accepted:
                         if (eval_store_q.qsize() > 0):
                             eval_store_q.get_nowait()
                             print("\033[38mReceived Buffer: ", self.received_actions, "\nEvalStore: \n", self.evalStore)
                             if not self.received_actions[player_num - 1]:
                                 eval_lock.acquire()
+                                
                                 #Store other player action
                                 if player_num == 1:
                                     enemy=1
                                 else:
                                     enemy=0
-                                preserved_action = self.evalStore.get(enemy_player[enemy]).get('action')
-                                print("PRESERVED ACTION: Player: ", enemy_player[enemy], preserved_action, "playerHP:", player_hp)
+                                preserved_action = self.evalStore.get(_players[enemy]).get('action')
+                                print("PRESERVED ACTION: Player: ", _players[enemy], preserved_action)
                                 
-                                for p in enemy_player:
+                                for p in _players:
                                     if state_read[p]['action'][:5] == "fail_":
                                         self.evalStore[p]['action'] = state_read[p]['action'][5:]
                                     else:
                                         self.evalStore[p]['action'] = state_read[p]['action']
-                                    self.evalStore[p]['hp']=player_hp[p]
 
                                 print("####################################################################" * 4)
                                 print("EVAL Pre Logic: ", self.evalStore)
 
+                                # Gamestate to send (First Action of each player after each Eval)
                                 self.evalStore, actionSucess = game_engine.runLogic(self.evalStore, player_num)
+                                # Correcting HP based on action that matter
+                                if self.evalStore[_players[player_num-1]]['action'] in ['grenade', 'shoot']:
+                                    game_engine.updateFromEval(self.evalStore)
+                                    atacktype, attacker = eval_damage.get_nowait()
+                                    self.evalStore = game_engine.performAction(atacktype, attacker)
 
                                 print()
                                 print("Eval Post Logic: ", self.evalStore)
 
-                                self.evalStore[enemy_player[enemy]]['action'] = preserved_action
+                                self.evalStore[_players[enemy]]['action'] = preserved_action
 
                                 print("\nPost Preservation: ", self.evalStore)
                                 temp = game_engine.prepForEval(self.evalStore, player_num, actionSucess)
@@ -420,8 +418,6 @@ class Client(threading.Thread):
                                     game_engine.checkShieldTimer(expected_state, state)
 
                                     self.evalStore.update(expected_state)
-                                    player_hp['p1'] = expected_state['p1']['hp']
-                                    player_hp['p2'] = expected_state['p2']['hp']
                                     expected_state = game_engine.resetValues(expected_state)
                                     input_state(expected_state)
 
