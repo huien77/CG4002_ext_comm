@@ -6,7 +6,6 @@ from datetime import timedelta
 
 class GameEngine():
     # KEYS we dont need to send to Eval Server
-    # non_eval_keys = ['bullet_hit']
     default_non_eval_pairs = [('action','none')]
     def __init__(self, player_state):
         super().__init__()
