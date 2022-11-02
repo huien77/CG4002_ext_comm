@@ -131,7 +131,7 @@ class GameEngine():
         else:
             state = self.player_state
         
-        print("[GameEngine]: State is {}".format(state))
+        # print("[GameEngine]: State is {}".format(state))
 
         if player_num == 1:
             player = 'p1'
@@ -193,8 +193,8 @@ class GameEngine():
             watchedAction = fail+watchedAction
             watchState['action'] = watchedAction
         
-        print("[GAME ENGINE]: END LOGIC STATE: ", state)
-        print(self.eval_state)
+        # print("[GAME ENGINE]: END LOGIC STATE: ", state)
+        # print(self.eval_state)
         if eval:
             self.eval_state = state
         else:
@@ -246,9 +246,9 @@ class GameEngine():
         self.lock.acquire()
         for p in ['p1', 'p2']:
             if self.eval_state[p]['action'][:5] == "fail_":
-                print("REMOVING FAIL from ", p, self.eval_state[p]['action'])
+                # print("REMOVING FAIL from ", p, self.eval_state[p]['action'])
                 self.eval_state[p]['action'] = self.eval_state[p]['action'][5:]
-                print("NEW action of ", p, self.eval_state[p]['action'])
+                # print("NEW action of ", p, self.eval_state[p]['action'])
 
         print("[GAME_ENGINE] State After Prep: \n", self.eval_state)
         self.lock.release()
@@ -256,14 +256,14 @@ class GameEngine():
     
     def resetValues(self, eval=False):
         self.lock.acquire()
-        print("\033[32m\n[GAME Engine] RESETTING: ", self.eval_state, "\n\n", self.player_state)
+        # print("\033[32m\n[GAME Engine] RESETTING: ", self.eval_state, "\n\n", self.player_state)
         if eval:
             self.eval_state['p1'].update(self.default_non_eval_pairs)
             self.eval_state['p2'].update(self.default_non_eval_pairs)
             self.lock.release()
-            print("[GAME Engine] AFTER: ", self.eval_state, "\n\n", self.player_state)
+            # print("[GAME Engine] AFTER: ", self.eval_state, "\n\n", self.player_state)
 
-            print("\033[0m",end="")
+            # print("\033[0m",end="")
             return self.eval_state
         else:
             action1 = self.eval_state['p1']['action']
@@ -275,9 +275,9 @@ class GameEngine():
             # self.eval_state['p1'].update([('action',action1)])
             # self.eval_state['p2'].update([('action',action2)])
             self.lock.release()
-            print("[GAME Engine] AFTER: ", self.eval_state, "\n\n", self.player_state)
+            # print("[GAME Engine] AFTER: ", self.eval_state, "\n\n", self.player_state)
 
-            print("\033[0m",end="")
+            # print("\033[0m",end="")
             return self.player_state
     
     def readGameState(self, eval=False):
