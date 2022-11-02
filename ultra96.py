@@ -18,6 +18,15 @@ from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 from Crypto.Random import get_random_bytes
 
+def doNothing(*args, end="huh"):
+    return
+
+debugMode = False
+if debugMode:
+    dbprint = print
+else:
+    dbprint = doNothing
+
 curr_state = {
     "p1": {
         "hp": 100,
@@ -102,9 +111,8 @@ class AIDetector(threading.Thread):
         action = "none"
         last_detected = "none"
                 
-        while action != "logout":
+        while True:
             # Update local game state from eval_server
-            game_engine.updatePlayerState(curr_state)
 
             # Read buffers and perform actions
             if self.player_num == 1:
@@ -124,6 +132,7 @@ class AIDetector(threading.Thread):
 
                 if ACTION_buffer.qsize() > 0:
                     try:
+                        game_engine.updatePlayerState(curr_state)
                         action = ACTION_buffer.get_nowait()
                         print("\033[0;35m\n\n\nPredicted:\t", action, "from player\t", self.player_num, "\t\tPrev_detect:", last_detected)
                         last_detected = action
@@ -137,7 +146,8 @@ class AIDetector(threading.Thread):
                 
                 if GUN_buffer.qsize() > 0:
                     try:
-                        print()
+                        game_engine.updatePlayerState(curr_state)
+                        dbprint()
                         player_num = GUN_buffer.get_nowait()
                         temp = game_engine.performAction('shoot', player_num, False)
                         
@@ -172,6 +182,7 @@ class AIDetector(threading.Thread):
 
                 if ACTION_buffer2.qsize() > 0:
                     try:
+                        game_engine.updatePlayerState(curr_state)
                         action = ACTION_buffer2.get_nowait()
                         # if (action != "idle"):
                         print("\033[0;33m\n\n\nPredicted:\t", action, "from player\t", 2, "\t\tPrev_detect:", last_detected)
@@ -186,7 +197,8 @@ class AIDetector(threading.Thread):
 
                 if GUN_buffer2.qsize() > 0:
                     try:
-                        print()
+                        game_engine.updatePlayerState(curr_state)
+                        dbprint()
                         player_num = GUN_buffer2.get_nowait()
                         temp = game_engine.performAction('shoot', player_num, False)
                         
@@ -219,16 +231,16 @@ class MQTTClient():
             self.uniqueCounter += 1
             state = vis_send_buffer.get_nowait()
             state["turn"] = self.uniqueCounter
-            print("PUBLISHED TO MQTT:", state, end="\n")
+            dbprint("PUBLISHED TO MQTT:", state, end="\n")
             message = json.dumps(state)
             # publishing message to topic
             self.client.publish(self.topic, message, qos = 1)
 
     def receive(self):
         def on_message(client, data, message):
-            print("\033[0;34mPutting VISRECV!!!", end="")
+            dbprint("\033[0;34mPutting VISRECV!!!", end="")
             vis_recv_buffer.put_nowait(message.payload.decode())
-            print("\r[MQTT] Received: ", message.payload.decode(), end="")
+            dbprint("\r[MQTT] Received: ", message.payload.decode(), end="")
 
         self.client.on_message = on_message
         self.client.subscribe(self.topic)
@@ -286,10 +298,10 @@ class Client(threading.Thread):
     def send_data(self, send_dict):
         length, encrypted_text = self.encrypt_message(send_dict)
         m = str(length) + "_"
-        print("data to eval", m)
+        dbprint("data to eval", m)
         self.socket.sendall(m.encode("utf-8"))
         self.socket.sendall(encrypted_text)
-        print("[Evaluation Client] Sent data")
+        dbprint("[Evaluation Client] Sent data")
 
     # receive from eval server
     def receive(self):
@@ -336,8 +348,8 @@ class Client(threading.Thread):
                     if state_read[_players[player_num-1]]['action'] == 'none':
                         break
 
-                    print("State:", state_read)
-                    print("Player:", player_num)
+                    dbprint("State:", state_read)
+                    dbprint("Player:", player_num)
                     state_pubs = game_engine.runLogic(player_num, eval=False)
                     vis_send_buffer.put_nowait(state_pubs)
                     mqtt_p.publish()
@@ -351,18 +363,21 @@ class Client(threading.Thread):
                             if vis_recv_buffer.qsize() > 0:
                                 vizData = vis_recv_buffer.get_nowait()
                                 if vizData != 'no':
-                                    print("\rPointed at Picture!! Should HIT! Tried {} times".format(trying), end="\033[0m\n")
+                                    dbprint("\rPointed at Picture!! Should HIT! Tried {} times".format(trying), end="\033[0m\n")
                                     game_engine.performAction(vizData)
                                     state_pubs = game_engine.resetValues(eval=False)
                                     vis_send_buffer.put_nowait(state_pubs)
                                     mqtt_p.publish()
+
+                                    state_pubs[_players[player_num-1]]['action']="grenade"
+                                    game_engine.updatePlayerState(state_pubs)
                                     eval_damage.put_nowait([vizData, player_num])
                             trying += 1
                             if trying > 200000:
                                 vizData='no'
                                 eval_damage.put_nowait([vizData, player_num])
                         
-                    print("", end="\033[0m\n")
+                    dbprint("", end="\033[0m\n")
 
                     eval_store_q.put_nowait("start")
                                     
@@ -376,7 +391,7 @@ class Client(threading.Thread):
                                 recved_dmg = False
                         if (eval_store_q.qsize() > 0):
                             eval_store_q.get_nowait()
-                            print("\033[38mReceived Buffer: ", self.received_actions, "\nEvalStore: \n", evalStore)
+                            dbprint("\033[38mReceived Buffer: ", self.received_actions, "\nEvalStore: \n", evalStore)
                             if not self.received_actions[player_num - 1]:
                                 eval_lock.acquire()
                                 
@@ -387,7 +402,7 @@ class Client(threading.Thread):
                                     enemy=0
                                 evalStore = game_engine.readGameState(True)
                                 preserved_action = evalStore.get(_players[enemy]).get('action')
-                                print("PRESERVED ACTION: Player: ", _players[enemy], preserved_action)
+                                dbprint("PRESERVED ACTION: Player: ", _players[enemy], preserved_action)
                                 
                                 for p in _players:
                                     if state_read[p]['action'][:5] == "fail_":
@@ -396,8 +411,8 @@ class Client(threading.Thread):
                                         evalStore[p]['action'] = state_read[p]['action']
                                     
                                 game_engine.updateFromEval(evalStore)
-                                print("####################################################################" * 4)
-                                print("EVAL Pre Logic: ", evalStore)
+                                dbprint("####################################################################" * 4)
+                                dbprint("EVAL Pre Logic: ", evalStore)
 
                                 # Gamestate to send (First Action of each player after each Eval)
                                 evalStore = game_engine.runLogic(player_num, eval=True)
@@ -406,25 +421,25 @@ class Client(threading.Thread):
                                     if recved_dmg:
                                         evalStore = game_engine.performAction(atacktype, attacker, eval=True)
 
-                                print()
-                                print("Eval Post Logic: ", evalStore)
+                                dbprint()
+                                dbprint("Eval Post Logic: ", evalStore)
 
                                 evalStore[_players[enemy]]['action'] = preserved_action
 
-                                print("\nPost Preservation: ", evalStore)
+                                dbprint("\nPost Preservation: ", evalStore)
                                 eval_to_send = game_engine.prepForEval()
 
                                 evalStore.update(eval_to_send)
                                 self.received_actions[player_num - 1] = True
 
-                                print("RECEIVED ACTIONS:", self.received_actions)
+                                dbprint("RECEIVED ACTIONS:", self.received_actions)
                                 if self.received_actions[0] and self.received_actions[1]:
-                                    print("\033[36m Sending to eval:", evalStore)
+                                    dbprint("\033[36m Sending to eval:", evalStore)
                                     self.send_data(eval_to_send)
 
                                     # receive expected state from eval server
                                     expected_state = self.receive()
-                                    print("\n\tReceived from eval:\n", expected_state, end="\033[0m\n")
+                                    dbprint("\n\tReceived from eval:\n", expected_state, end="\033[0m\n")
                                     expected_state = json.loads(expected_state)
 
                                     # Game State timer check in case of wrong detection of shield
@@ -435,7 +450,7 @@ class Client(threading.Thread):
                                     expected_state = game_engine.resetValues(True)
                                     input_state(expected_state)
 
-                                    print("\n\t\tLatest EvalsStore: ", game_engine.readGameState(True))
+                                    dbprint("\n\t\tLatest EvalsStore: ", game_engine.readGameState(True))
 
                                     # Reset of player eval server receivers
                                     self.received_actions = [False, ONE_PLAYER_MODE]
@@ -446,7 +461,7 @@ class Client(threading.Thread):
                                 if eval_damage.qsize() > 0 :
                                     __, __ = eval_damage.get_nowait()
 
-                            print(end="\033[0m\n")
+                            dbprint(end="\033[0m\n")
 
                     state_pubs = game_engine.resetValues(eval=False)
                     input_state(state_pubs)

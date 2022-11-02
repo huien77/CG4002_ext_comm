@@ -41,6 +41,7 @@ class GameEngine():
 
         self.p1 = Player(self.player_state['p1'])
         self.p2 = Player(self.player_state['p2'])
+        
 
     def performAction(self, action, player_num=1, eval=False):
         if eval:
@@ -149,16 +150,17 @@ class GameEngine():
 
         # This function checks whenever action is not shield for the shield TIMER
         # Not called when shield is instantiated for eval server
-        elif (watchState['shield_time'] > 0):
-            if player_num == 1:
-                time_diff = self.end_time1 - datetime.now()
-            else:
-                time_diff = self.end_time2 - datetime.now()
-            if time_diff.total_seconds() <= 0:
-                watchState['shield_time'] = 0
-                watchState['shield_health'] = 0
-            elif time_diff.total_seconds() > 0:
-                watchState['shield_time'] = float(time_diff.total_seconds())
+        for p in ['p1','p2']:
+            if ((state[p]['shield_time'] > 0)):
+                if p == 'p1':
+                    time_diff = self.end_time1 - datetime.now()
+                else:
+                    time_diff = self.end_time2 - datetime.now()
+                if time_diff.total_seconds() <= 0:
+                    state[p]['shield_time'] = 0
+                    state[p]['shield_health'] = 0
+                elif time_diff.total_seconds() > 0:
+                    state[p]['shield_time'] = float(time_diff.total_seconds())
 
         # Not elif > TIMER check used elif and we still want to check actions
         if watchedAction == "shoot":
