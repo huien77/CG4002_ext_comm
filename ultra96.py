@@ -367,10 +367,13 @@ class Client(Process):
                     if state_read[_players[player_num-1]]['action'] == 'none':
                         break
 
+                    game_engine.printWatch()
+
                     dbprint("State:", state_read)
                     dbprint("Player:", player_num)
                     state_pubs = game_engine.runLogic(player_num, eval=False)
                     fnTrack(2)
+                    game_engine.printWatch()
                     vis_send_buffer.put(state_pubs)
                     fnTrack(3)
                     mqtt_p.publish()
@@ -387,7 +390,7 @@ class Client(Process):
                                 vizData = vis_recv_buffer.get()
                                 if vizData != 'no':
                                     dbprint("\rPointed at Picture!! Should HIT! Tried {} times".format(trying), end="\033[0m\n")
-                                    game_engine.performAction(vizData)
+                                    game_engine.performAction(vizData, eval=False)
                                     state_pubs = game_engine.resetValues(eval=False)
                                     vis_send_buffer.put(state_pubs)
                                     mqtt_p.publish()
@@ -406,6 +409,7 @@ class Client(Process):
                     fnTrack(7)
                     if self.accepted:
                         fnTrack(8)
+                        game_engine.printWatch()
                         statedmgCheck = game_engine.readGameState(False)
                         if statedmgCheck[_players[player_num-1]]['action'] in ['grenade', 'shoot']:
                             if eval_damage.qsize() > 0:
@@ -414,6 +418,7 @@ class Client(Process):
                             else:
                                 recved_dmg = False
                         fnTrack(9)
+                        game_engine.printWatch()
                         if (eval_store_q.qsize() > 0):
                             fnTrack(10)
                             eval_store_q.get()
@@ -425,6 +430,7 @@ class Client(Process):
                                     enemy=1
                                 else:
                                     enemy=0
+                                game_engine.printWatch()
                                 evalStore = game_engine.readGameState(True)
                                 dbprint("\033[38mReceived Buffer: ", self.received_actions, "\nEvalStore: \n", evalStore)
                                 preserved_action = evalStore.get(_players[enemy]).get('action')
@@ -432,19 +438,22 @@ class Client(Process):
                                 
                                 for p in _players:
                                     if state_read[p]['action'][:5] == "fail_":
-                                        evalAction = state_read[p]['action'][5:]
+                                        evalAction = state_read[p].get('action')[5:]
                                     else:
-                                        evalAction = state_read[p]['action']
+                                        evalAction = state_read[p].get('action')
                                     evalStore[p]['action'] = evalAction
-                                    
+                                game_engine.printWatch()
                                 game_engine.updateFromEval(evalStore)
                                 dbprint("####################################################################" * 4)
                                 dbprint("EVAL Pre Logic: ", evalStore)
+                                game_engine.printWatch()
 
                                 # Gamestate to send (First Action of each player after each Eval)
                                 evalStore = game_engine.runLogic(player_num, eval=True)
                                 dbprint("[BUGGEY 1]? ", evalStore)
+                                game_engine.printWatch()
                                 game_engine.updateFromEval(evalStore)
+                                game_engine.printWatch()
                                 dbprint("[BUGGY 2] ?", evalStore)
                                 # Correcting HP based on action that matter
                                 if evalStore[_players[player_num-1]]['action'] in ['grenade', 'shoot']:
@@ -453,11 +462,14 @@ class Client(Process):
 
                                 dbprint()
                                 dbprint("Eval Post Logic: ", evalStore)
+                                game_engine.printWatch()
 
                                 evalStore[_players[enemy]]['action'] = preserved_action
 
                                 dbprint("\nPost Preservation: ", evalStore)
+                                game_engine.printWatch()
                                 game_engine.updateFromEval(evalStore)
+                                game_engine.printWatch()
                                 eval_to_send = game_engine.prepForEval()
 
                                 evalStore.update(eval_to_send)
@@ -495,8 +507,8 @@ class Client(Process):
 
                             dbprint(end="\033[0m\n")
                     fnTrack(11)
-                    newState = game_engine.resetValues(eval=False)
-                    input_state(newState)
+                    state_pubs = game_engine.resetValues(eval=False)
+                    input_state(state_pubs)
                     fnTrack(12)
 
 

@@ -1,4 +1,3 @@
-import threading
 from Actions import Actions
 from PlayerState import Player
 from datetime import datetime
@@ -7,8 +6,10 @@ from datetime import timedelta
 class GameEngine():
     # KEYS we dont need to send to Eval Server
     default_non_eval_pairs = [('action','none')]
-    def __init__(self, player_state):
+    def __init__(self, player_state, engine_lock):
         super().__init__()
+        self.lock = engine_lock
+
         self.player_state = {}
         self.player_state.update(player_state)
         self.p1 = Player(self.player_state['p1'])
@@ -16,8 +17,8 @@ class GameEngine():
 
         self.eval_state = {}
         self.eval_state.update(player_state)
-        self.e1 = Player(self.player_state['p1'])
-        self.e2 = Player(self.player_state['p2'])
+        self.e1 = Player(self.eval_state['p1'])
+        self.e2 = Player(self.eval_state['p2'])
 
         self.end_time1 = datetime.now()
         self.end_time2 = datetime.now()
@@ -25,25 +26,30 @@ class GameEngine():
         print('[Game Engine: STARTED]')
     
     def updateFromEval(self, correctedState):
-        self.player_state.update(correctedState)
-        self.eval_state.update(correctedState)
+        self.lock.acquire()
 
+        for p in ['p1','p2']:
+            self.player_state[p] = {**correctedState[p]}
+            self.eval_state[p] = {**correctedState[p]}
+        
         self.p1 = Player(self.player_state['p1'])
         self.p2 = Player(self.player_state['p2'])
 
         self.e1 = Player(self.eval_state['p1'])
         self.e2 = Player(self.eval_state['p2'])
-
-        print("[GAME ENGINE]: UPDATED", self.eval_state)
+        self.lock.release()
 
     def updatePlayerState(self, curr_state):
+        self.lock.acquire()
         self.player_state.update(curr_state)
 
         self.p1 = Player(self.player_state['p1'])
         self.p2 = Player(self.player_state['p2'])
+        self.lock.release()
         
 
     def performAction(self, action, player_num=1, eval=False):
+        self.lock.acquire()
         if eval:
             main1 = self.e1
             main2 = self.e2
@@ -108,15 +114,18 @@ class GameEngine():
             self.e2 = main2
             self.eval_state['p1'] = main1.__dict__
             self.eval_state['p2'] = main2.__dict__
+            self.lock.release()
             return self.eval_state
         else:
             self.p1 = main1
             self.p2 = main2
             self.player_state['p1'] = main1.__dict__
             self.player_state['p2'] = main2.__dict__
+            self.lock.release()
             return self.player_state
 
     def runLogic(self, player_num, eval=False):
+        self.lock.acquire()
         if eval:
             state = self.eval_state
         else:
@@ -190,9 +199,11 @@ class GameEngine():
             self.eval_state = state
         else:
             self.player_state = state
+        self.lock.release()
         return state
 
     def checkShieldTimer(self, expected_state):
+        self.lock.acquire()
         for p in ['p1', 'p2']:
             if expected_state[p]['action']=="shield":
                 if expected_state[p]['num_shield'] > 0 and not (self.eval_state[p]['shield_time'] > 0 and self.eval_state[p]['shield_time'] <= 10):
@@ -200,31 +211,39 @@ class GameEngine():
                         self.end_time1 = datetime.now()+timedelta(seconds=10)
                     else:
                         self.end_time2 = datetime.now()+timedelta(seconds=10)
+        self.lock.release()
     
-    def getKey_Values(self, state, playerNum, sKey):
-        if playerNum == 0:
-            return 'p1', state.get('p1').get(sKey)
-        else:
-            return 'p2', state.get('p2').get(sKey)
+    # def getKey_Values(self, state, playerNum, sKey):
+    #     if playerNum == 0:
+    #         return 'p1', state.get('p1').get(sKey)
+    #     else:
+    #         return 'p2', state.get('p2').get(sKey)
 
-    def saveState(self, state):
-        savedKV_pair = []
-        for i in range(2):
-            player_key_value_pairs = []
-            for k in self.non_eval_keys:
-                player_key_value_pairs.append(self.getKey_Values(state, i, k))
-            savedKV_pair.append(player_key_value_pairs)
-        return savedKV_pair
+    # def saveState(self, state):
+    #     savedKV_pair = []
+    #     for i in range(2):
+    #         player_key_value_pairs = []
+    #         for k in self.non_eval_keys:
+    #             player_key_value_pairs.append(self.getKey_Values(state, i, k))
+    #         savedKV_pair.append(player_key_value_pairs)
+    #     return savedKV_pair
+
+    def printWatch(self):
+        return
+        # print("\033[31m\n\n[GAME Engine] WATCH: ", self.eval_state, "\n\n", self.player_state, end="\033[0m\n")
     
     def updateStates(self, savedKV_pair):
+        self.lock.acquire()
         players = [self.p1, self.p2]
         for i in range(len(savedKV_pair)):
             players[i].update(savedKV_pair[i])
 
         self.player_state['p1'] = self.p1.__dict__
         self.player_state['p2'] = self.p2.__dict__
+        self.lock.release()
     
     def prepForEval(self):
+        self.lock.acquire()
         for p in ['p1', 'p2']:
             if self.eval_state[p]['action'][:5] == "fail_":
                 print("REMOVING FAIL from ", p, self.eval_state[p]['action'])
@@ -232,20 +251,40 @@ class GameEngine():
                 print("NEW action of ", p, self.eval_state[p]['action'])
 
         print("[GAME_ENGINE] State After Prep: \n", self.eval_state)
+        self.lock.release()
         return self.eval_state
     
     def resetValues(self, eval=False):
+        self.lock.acquire()
+        print("\033[32m\n[GAME Engine] RESETTING: ", self.eval_state, "\n\n", self.player_state)
         if eval:
             self.eval_state['p1'].update(self.default_non_eval_pairs)
             self.eval_state['p2'].update(self.default_non_eval_pairs)
+            self.lock.release()
+            print("[GAME Engine] AFTER: ", self.eval_state, "\n\n", self.player_state)
+
+            print("\033[0m",end="")
             return self.eval_state
         else:
+            action1 = self.eval_state['p1']['action']
+            action2 = self.eval_state['p2']['action']
+
             self.player_state['p1'].update(self.default_non_eval_pairs)
             self.player_state['p2'].update(self.default_non_eval_pairs)
+
+            # self.eval_state['p1'].update([('action',action1)])
+            # self.eval_state['p2'].update([('action',action2)])
+            self.lock.release()
+            print("[GAME Engine] AFTER: ", self.eval_state, "\n\n", self.player_state)
+
+            print("\033[0m",end="")
             return self.player_state
     
     def readGameState(self, eval=False):
+        self.lock.acquire()
         if eval:
+            self.lock.release()
             return self.eval_state
         else:
+            self.lock.release()
             return self.player_state
