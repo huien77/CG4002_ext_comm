@@ -8,7 +8,8 @@ import paho.mqtt.client as mqtt
 from os import path
 from pathlib import Path
 from sys import path as sp
-import queue
+from multiprocessing import Process, Queue, Lock
+# import queue
 
 sp.append(path.join((Path.cwd()).parent,"jupyter_notebooks","capstoneml","scripts"))
 from start_detector import Detector
@@ -26,6 +27,13 @@ if debugMode:
     dbprint = print
 else:
     dbprint = doNothing
+
+printLock = Lock()
+def lockedPrinting(*args, end="\n"):
+    printLock.acquire()
+    print(args,end=end)
+    printLock.release()
+
 
 def fnTrack(trackid):
     print("\n\033[32m{}\033[0m\n".format(trackid))
@@ -56,29 +64,29 @@ curr_state = {
 ONE_PLAYER_MODE = False  # Initialise as 1 player mode
 
 # internal comm buffer
-IMU_buffer = queue.Queue()
-IMU_buffer2 = queue.Queue()
-GUN_buffer = queue.Queue()
-GUN_buffer2 = queue.Queue()
-ACTION_buffer = queue.Queue()
-ACTION_buffer2 = queue.Queue()
-vest_buffer = queue.Queue()
-eval_damage = queue.Queue()
+IMU_buffer = Queue()
+IMU_buffer2 = Queue()
+GUN_buffer = Queue()
+GUN_buffer2 = Queue()
+ACTION_buffer = Queue()
+ACTION_buffer2 = Queue()
+vest_buffer = Queue()
+eval_damage = Queue()
 
 # internal_lock = threading.Lock()
 # eval server buffer
-eval_buffer = queue.Queue()
+eval_buffer = Queue()
 
 eval_lock = threading.Lock()
-eval_store_q = queue.Queue()
+eval_store_q = Queue()
 
 # eval_lock = threading.Lock()
 # receive from visualizer buffer
-vis_recv_buffer = queue.Queue()
+vis_recv_buffer = Queue()
 
 # vis_recv_lock = threading.Lock()
 # send to visualizer buffer
-vis_send_buffer = queue.Queue()
+vis_send_buffer = Queue()
 # vis_send_lock = threading.Lock()
 
 state_lock = threading.Lock()
@@ -90,7 +98,7 @@ def input_state(data):
     state_lock.release()
 
 # for AI
-class AIDetector(threading.Thread):
+class AIDetector(Process):
     def __init__(self, player):
         super().__init__()
         # 2 Detectors, (1 per player) [1 Created as there are 2 threads]
@@ -123,9 +131,9 @@ class AIDetector(threading.Thread):
                     # print("\r", IMU_buffer.qsize())
                     try:
                         data = IMU_buffer.get_nowait()
-                        if IMU_buffer.qsize() >= 40:
-                            print("\r",IMU_buffer.qsize(), end="")
-                            IMU_buffer.queue.clear()
+                        # if IMU_buffer.qsize() >= 40:
+                        #     print("\r",IMU_buffer.qsize(), end="")
+                        #     IMU_buffer.queue.clear()
                         action = self.predict_action(data["V"])
                         if (action != "idle"):
                             ACTION_buffer.put_nowait(action)
@@ -172,9 +180,9 @@ class AIDetector(threading.Thread):
                 while IMU_buffer2.qsize() > 0:
                     try:
                         data = IMU_buffer2.get_nowait()
-                        if IMU_buffer2.qsize() >= 40:
-                            print("   \r",IMU_buffer.qsize(), end="")
-                            IMU_buffer2.queue.clear()
+                        # if IMU_buffer2.qsize() >= 40:
+                        #     print("   \r",IMU_buffer.qsize(), end="")
+                        #     IMU_buffer2.queue.clear()
                         action = self.predict_action(data["V"])
                         if action != "idle":
                             ACTION_buffer2.put_nowait(action)
@@ -254,7 +262,7 @@ class MQTTClient():
         self.client.disconnect()
 
 # eval_client
-class Client(threading.Thread):
+class Client(Process):
     # ONE Player -> FALSE TRUE
     # TWO PLAYER -> FALSE FALSE
     # NOTE v v v v v v v v Possible bug point!!! 
@@ -343,6 +351,9 @@ class Client(threading.Thread):
         evalStore = game_engine.readGameState(True)
         _players = ['p1', 'p2']
         recved_dmg = False
+        mqtt_p = MQTTClient('visualizer17', 'publish')
+        mqtt_p.client.loop_start()
+        
         while True:
             while eval_buffer.qsize() > 0:
                 # try:
@@ -489,7 +500,7 @@ class Client(threading.Thread):
         print('[Evaluation Client] Closed')
 
 # receive from relay laptop
-class Server(threading.Thread):
+class Server(Process):
     def __init__(self, port_num, player):
         super().__init__()
         # TCP/IP socket
@@ -603,15 +614,17 @@ if __name__ == "__main__":
     # game_engine.start()
 
     AI_detector1 = AIDetector(1)
-    AI_detector1.start()
     AI_detector2 = AIDetector(2)
+
+    AI_detector1.start()
     AI_detector2.start()
 
     # start thread for receiving from laptop
     u_server1 = Server(int(port_server1),1)
-    u_server1.start()
     u_server2 = Server(int(port_server2),2)
-    u_server2.start()
+
+    u_server1.start()
+    # u_server2.start()
 
     # start ultra96 client to eval server thread
     my_client = Client(ip_addr, port_num, group_id, secret_key)
@@ -624,5 +637,5 @@ if __name__ == "__main__":
     mqtt_r.receive()
     mqtt_r.client.loop_start()
 
-    mqtt_p = MQTTClient('visualizer17', 'publish')
-    mqtt_p.client.loop_start()
+    # mqtt_p = MQTTClient('visualizer17', 'publish')
+    # mqtt_p.client.loop_start()
