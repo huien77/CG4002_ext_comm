@@ -186,6 +186,10 @@ class GameEngine():
         
         print("[GAME ENGINE]: END LOGIC STATE: ", state)
         print(self.eval_state)
+        if eval:
+            self.eval_state = state
+        else:
+            self.player_state = state
         return state
 
     def checkShieldTimer(self, expected_state):

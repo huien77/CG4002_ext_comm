@@ -27,6 +27,9 @@ if debugMode:
 else:
     dbprint = doNothing
 
+def fnTrack(trackid):
+    print("\n\033[32m{}\033[0m\n".format(trackid))
+
 curr_state = {
     "p1": {
         "hp": 100,
@@ -120,7 +123,7 @@ class AIDetector(threading.Thread):
                     # print("\r", IMU_buffer.qsize())
                     try:
                         data = IMU_buffer.get_nowait()
-                        if IMU_buffer.qsize() >= 20:
+                        if IMU_buffer.qsize() >= 40:
                             print("\r",IMU_buffer.qsize(), end="")
                             IMU_buffer.queue.clear()
                         action = self.predict_action(data["V"])
@@ -169,8 +172,8 @@ class AIDetector(threading.Thread):
                 while IMU_buffer2.qsize() > 0:
                     try:
                         data = IMU_buffer2.get_nowait()
-                        if IMU_buffer2.qsize() >= 20:
-                            print("\t\t\r",IMU_buffer.qsize(), end="")
+                        if IMU_buffer2.qsize() >= 40:
+                            print("   \r",IMU_buffer.qsize(), end="")
                             IMU_buffer2.queue.clear()
                         action = self.predict_action(data["V"])
                         if action != "idle":
@@ -343,6 +346,7 @@ class Client(threading.Thread):
         while True:
             while eval_buffer.qsize() > 0:
                 # try:
+                    fnTrack(1)
                     state_read, player_num = eval_buffer.get_nowait()
 
                     if state_read[_players[player_num-1]]['action'] == 'none':
@@ -351,16 +355,20 @@ class Client(threading.Thread):
                     dbprint("State:", state_read)
                     dbprint("Player:", player_num)
                     state_pubs = game_engine.runLogic(player_num, eval=False)
+                    fnTrack(2)
                     vis_send_buffer.put_nowait(state_pubs)
+                    fnTrack(3)
                     mqtt_p.publish()
 
                     # NOTE BUG Performing Uncollected
                     if state_pubs['p1']['action'] == 'grenade' or state_pubs['p2']['action'] == 'grenade':
+                        fnTrack(4)
                         vizData = "uncollected"
                         trying = 0
                         while vizData == "uncollected":
                             # visualizer sends player that is hit by grenade
                             if vis_recv_buffer.qsize() > 0:
+                                fnTrack(5)
                                 vizData = vis_recv_buffer.get_nowait()
                                 if vizData != 'no':
                                     dbprint("\rPointed at Picture!! Should HIT! Tried {} times".format(trying), end="\033[0m\n")
@@ -376,12 +384,13 @@ class Client(threading.Thread):
                             if trying > 200000:
                                 vizData='no'
                                 eval_damage.put_nowait([vizData, player_num])
-                        
+                    fnTrack(6)
                     dbprint("", end="\033[0m\n")
 
                     eval_store_q.put_nowait("start")
-                                    
+                    fnTrack(7)
                     if self.accepted:
+                        fnTrack(8)
                         statedmgCheck = game_engine.readGameState(False)
                         if statedmgCheck[_players[player_num-1]]['action'] in ['grenade', 'shoot']:
                             if eval_damage.qsize() > 0:
@@ -389,7 +398,9 @@ class Client(threading.Thread):
                                 recved_dmg = True
                             else:
                                 recved_dmg = False
+                        fnTrack(9)
                         if (eval_store_q.qsize() > 0):
+                            fnTrack(10)
                             eval_store_q.get_nowait()
                             dbprint("\033[38mReceived Buffer: ", self.received_actions, "\nEvalStore: \n", evalStore)
                             if not self.received_actions[player_num - 1]:
@@ -427,6 +438,7 @@ class Client(threading.Thread):
                                 evalStore[_players[enemy]]['action'] = preserved_action
 
                                 dbprint("\nPost Preservation: ", evalStore)
+                                game_engine.updateFromEval(evalStore)
                                 eval_to_send = game_engine.prepForEval()
 
                                 evalStore.update(eval_to_send)
@@ -462,9 +474,10 @@ class Client(threading.Thread):
                                     __, __ = eval_damage.get_nowait()
 
                             dbprint(end="\033[0m\n")
-
+                    fnTrack(11)
                     state_pubs = game_engine.resetValues(eval=False)
                     input_state(state_pubs)
+                    fnTrack(12)
 
 
                 # except Exception as e:
