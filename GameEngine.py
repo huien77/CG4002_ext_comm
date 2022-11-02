@@ -9,11 +9,13 @@ class GameEngine():
     default_non_eval_pairs = [('action','none')]
     def __init__(self, player_state):
         super().__init__()
-        self.player_state = player_state
+        self.player_state = {}
+        self.player_state.update(player_state)
         self.p1 = Player(self.player_state['p1'])
         self.p2 = Player(self.player_state['p2'])
 
-        self.eval_state = player_state
+        self.eval_state = {}
+        self.eval_state.update(player_state)
         self.e1 = Player(self.player_state['p1'])
         self.e2 = Player(self.player_state['p2'])
 
@@ -31,6 +33,8 @@ class GameEngine():
 
         self.e1 = Player(self.eval_state['p1'])
         self.e2 = Player(self.eval_state['p2'])
+
+        print("[GAME ENGINE]: UPDATED", self.eval_state)
 
     def updatePlayerState(self, curr_state):
         self.player_state.update(curr_state)
@@ -116,6 +120,8 @@ class GameEngine():
             state = self.eval_state
         else:
             state = self.player_state
+        
+        print("[GameEngine]: State is {}".format(state))
 
         if player_num == 1:
             player = 'p1'
@@ -175,7 +181,9 @@ class GameEngine():
             fail = "fail_"
             watchedAction = fail+watchedAction
             watchState['action'] = watchedAction
-
+        
+        print("[GAME ENGINE]: END LOGIC STATE: ", state)
+        print(self.eval_state)
         return state
 
     def checkShieldTimer(self, expected_state):
@@ -224,6 +232,7 @@ class GameEngine():
         if eval:
             self.eval_state['p1'].update(self.default_non_eval_pairs)
             self.eval_state['p2'].update(self.default_non_eval_pairs)
+            return self.eval_state
         else:
             self.player_state['p1'].update(self.default_non_eval_pairs)
             self.player_state['p2'].update(self.default_non_eval_pairs)
