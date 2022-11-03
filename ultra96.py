@@ -36,8 +36,8 @@ def lockedPrinting(*args, end="\n"):
 
 
 def fnTrack(trackid):
-    return
-    # print("\n\033[32m{}\033[0m\n".format(trackid))
+    # return
+    print("\n\033[32m{}\033[0m\n".format(trackid))
 
 curr_state = {
     "p1": {
@@ -125,7 +125,7 @@ class AIDetector(Process):
 
         # Sensitivity: Percentage certainty that prediction is correct
         # Threshold: Threshold of standard deviation of Accelerators combined
-        r = useFunc(data, 3, sensitivity=0.6, threshold=0.060, ideal_len=ideal_len)
+        r = useFunc(data, 3, sensitivity=0.68, threshold=0.055, ideal_len=ideal_len)
         
         return actions[r]
 
@@ -295,6 +295,7 @@ class Client(Process):
         while True:
             if ACTION_buffer.qsize() > 0:
                 try:
+                    fnTrack("ACTION BUFFER 1")
                     game_engine.updatePlayerState(curr_state)
                     action = ACTION_buffer.get()
                     print("\033[0;35m\n\n\nPredicted:\t", action, "from player\t", 1, "\t\tPrev_detect:", last_detected1)
@@ -305,10 +306,11 @@ class Client(Process):
                     eval_buffer.put([temp, 1])
                 except Exception as e:
                     print(e)
-                    pass
+                    
             
             if GUN_buffer.qsize() > 0:
                 try:
+                    fnTrack("GUN BUFFER 1")
                     game_engine.updatePlayerState(curr_state)
                     dbprint()
                     player_num = GUN_buffer.get()
@@ -328,8 +330,9 @@ class Client(Process):
                     print(e)
                     pass
             
-            if ACTION_buffer2.qsize() > 0:
+            if not ACTION_buffer2.empty()> 0:
                 try:
+                    fnTrack("ACTION BUFFER 2")
                     game_engine.updatePlayerState(curr_state)
                     action = ACTION_buffer2.get()
                     # if (action != "idle"):
@@ -479,22 +482,24 @@ class Client(Process):
                                     except BrokenPipeError as e:
                                         self.accepted = False
                                         break
+                                    try:
+                                        # receive expected state from eval server
+                                        expected_state = self.receive()
+                                        dbprint("\n\tReceived from eval:\n", expected_state, end="\033[0m\n")
+                                        expected_state = json.loads(expected_state)
 
-                                    # receive expected state from eval server
-                                    expected_state = self.receive()
-                                    dbprint("\n\tReceived from eval:\n", expected_state, end="\033[0m\n")
-                                    expected_state = json.loads(expected_state)
+                                        # Game State timer check in case of wrong detection of shield
+                                        game_engine.checkShieldTimer(expected_state)
 
-                                    # Game State timer check in case of wrong detection of shield
-                                    game_engine.checkShieldTimer(expected_state)
+                                        evalStore.update(expected_state)
+                                        game_engine.updateFromEval(expected_state)
+                                        expected_state = game_engine.resetValues(True)
+                                        while not eval_damage.empty():
+                                            eval_damage.get()
 
-                                    evalStore.update(expected_state)
-                                    game_engine.updateFromEval(expected_state)
-                                    expected_state = game_engine.resetValues(True)
-                                    while not eval_damage.empty():
-                                        eval_damage.get()
-
-                                    input_state(expected_state)
+                                        input_state(expected_state)
+                                    except Exception as e:
+                                        print("RECEIVE PROBLEMO? MSG: {}".format(e))
 
                                     dbprint("\n\t\tLatest EvalsStore: ", game_engine.readGameState(True))
 
