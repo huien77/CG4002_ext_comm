@@ -132,8 +132,6 @@ class AIDetector(Process):
     def run(self):
         # Initiate Terminal Outputs
         action = "none"
-        last_detected1 = "none"
-        last_detected2 = "none"
                 
         while True:
             # Update local game state from eval_server
@@ -150,41 +148,6 @@ class AIDetector(Process):
                     except Exception as e:
                         print(e)
                         pass
-                if ACTION_buffer.qsize() > 0:
-                    try:
-                        game_engine.updatePlayerState(curr_state)
-                        action = ACTION_buffer.get()
-                        print("\033[0;35m\n\n\nPredicted:\t", action, "from player\t", 1, "\t\tPrev_detect:", last_detected1)
-                        last_detected1 = action
-
-                        temp = game_engine.performAction(action, 1, False)
-                        input_state(temp)
-                        eval_buffer.put([temp, 1])
-                    except Exception as e:
-                        print(e)
-                        pass
-                
-                if GUN_buffer.qsize() > 0:
-                    try:
-                        game_engine.updatePlayerState(curr_state)
-                        dbprint()
-                        player_num = GUN_buffer.get()
-                        temp = game_engine.performAction('shoot', player_num, False)
-                        
-                        # Check bullet hit of opponent
-                        if vest_buffer.qsize() > 0:
-                            vest_buffer.get()
-                            vest_buffer.queue.clear()
-                            temp = game_engine.performAction('bullet1', 1, False)
-                            eval_damage.put(['bullet1', 1])
-                        
-                        # this output is needed by eval server
-                        input_state(temp)
-                        eval_buffer.put([temp, player_num])
-                    except Exception as e:
-                        print(e)
-                        pass
-                
        
             elif self.player_num == 2:
                 while IMU_buffer2.qsize() > 0:
@@ -198,41 +161,6 @@ class AIDetector(Process):
                         print(e)
                         pass
 
-                if ACTION_buffer2.qsize() > 0:
-                    try:
-                        game_engine.updatePlayerState(curr_state)
-                        action = ACTION_buffer2.get()
-                        # if (action != "idle"):
-                        print("\033[0;33m\n\n\nPredicted:\t", action, "from player\t", 2, "\t\tPrev_detect:", last_detected2)
-                        last_detected2 = action
-
-                        temp = game_engine.performAction(action, 2, False)
-                        input_state(temp)
-                        eval_buffer.put([temp, 2])
-                    except Exception as e:
-                        print(e)
-                        pass
-
-                if GUN_buffer2.qsize() > 0:
-                    try:
-                        game_engine.updatePlayerState(curr_state)
-                        dbprint()
-                        player_num = GUN_buffer2.get()
-                        temp = game_engine.performAction('shoot', player_num, False)
-                        
-                        # Check bullet hit of opponent
-                        if vest_buffer.qsize() > 0:
-                            vest_buffer.get()
-                            vest_buffer.queue.clear()
-                            temp = game_engine.performAction('bullet2', 2, False)
-                            eval_damage.put(['bullet2', 2])
-                        
-                        # this output is needed by eval server
-                        input_state(temp)
-                        eval_buffer.put([temp, player_num])
-                    except Exception as e:
-                        print(e)
-                        pass
 
 # for visualizer
 class MQTTClient():
@@ -360,8 +288,82 @@ class Client(Process):
         recved_dmg = False
         mqtt_p = MQTTClient('visualizer17', 'publish')
         mqtt_p.client.loop_start()
+        last_detected1 = "none"
+        last_detected2 = "none"
+
 
         while True:
+            if ACTION_buffer.qsize() > 0:
+                try:
+                    game_engine.updatePlayerState(curr_state)
+                    action = ACTION_buffer.get()
+                    print("\033[0;35m\n\n\nPredicted:\t", action, "from player\t", 1, "\t\tPrev_detect:", last_detected1)
+                    last_detected1 = action
+
+                    temp = game_engine.performAction(action, 1, False)
+                    input_state(temp)
+                    eval_buffer.put([temp, 1])
+                except Exception as e:
+                    print(e)
+                    pass
+            
+            if GUN_buffer.qsize() > 0:
+                try:
+                    game_engine.updatePlayerState(curr_state)
+                    dbprint()
+                    player_num = GUN_buffer.get()
+                    temp = game_engine.performAction('shoot', player_num, False)
+                    
+                    # Check bullet hit of opponent
+                    if vest_buffer.qsize() > 0:
+                        vest_buffer.get()
+                        # vest_buffer.queue.clear()
+                        temp = game_engine.performAction('bullet1', 1, False)
+                        eval_damage.put(['bullet1', 1])
+                    
+                    # this output is needed by eval server
+                    input_state(temp)
+                    eval_buffer.put([temp, player_num])
+                except Exception as e:
+                    print(e)
+                    pass
+            
+            if ACTION_buffer2.qsize() > 0:
+                try:
+                    game_engine.updatePlayerState(curr_state)
+                    action = ACTION_buffer2.get()
+                    # if (action != "idle"):
+                    print("\033[0;33m\n\n\nPredicted:\t", action, "from player\t", 2, "\t\tPrev_detect:", last_detected2)
+                    last_detected2 = action
+
+                    temp = game_engine.performAction(action, 2, False)
+                    input_state(temp)
+                    eval_buffer.put([temp, 2])
+                except Exception as e:
+                    print(e)
+                    pass
+
+            if GUN_buffer2.qsize() > 0:
+                try:
+                    game_engine.updatePlayerState(curr_state)
+                    dbprint()
+                    player_num = GUN_buffer2.get()
+                    temp = game_engine.performAction('shoot', player_num, False)
+                    
+                    # Check bullet hit of opponent
+                    if vest_buffer.qsize() > 0:
+                        vest_buffer.get()
+                        # vest_buffer.queue.clear()
+                        temp = game_engine.performAction('bullet2', 2, False)
+                        eval_damage.put(['bullet2', 2])
+                    
+                    # this output is needed by eval server
+                    input_state(temp)
+                    eval_buffer.put([temp, player_num])
+                except Exception as e:
+                    print(e)
+                    pass
+
             while eval_buffer.qsize() > 0:
                 # try:
                     fnTrack(1)
@@ -385,7 +387,7 @@ class Client(Process):
                     if state_pubs['p1']['action'] == 'grenade' or state_pubs['p2']['action'] == 'grenade':
                         fnTrack(4)
                         vizData = "uncollected"
-                        # trying = 0
+                        trying = 0
                         while vizData == "uncollected":
                             # visualizer sends player that is hit by grenade
                             if vis_recv_buffer.qsize() > 0:
@@ -401,8 +403,8 @@ class Client(Process):
                                     state_pubs[_players[player_num-1]]['action']="grenade"
                                     game_engine.updatePlayerState(state_pubs)
                                     eval_damage.put([vizData, player_num])
-                            # trying += 1
-                            # if trying > 200000:
+                            trying += 1
+                            # if trying > 1000000:
                             #     vizData='no'
                             #     eval_damage.put([vizData, player_num])
                     fnTrack(6)
@@ -489,14 +491,17 @@ class Client(Process):
                                     evalStore.update(expected_state)
                                     game_engine.updateFromEval(expected_state)
                                     expected_state = game_engine.resetValues(True)
+                                    while not eval_damage.empty():
+                                        eval_damage.get()
+
                                     input_state(expected_state)
 
                                     dbprint("\n\t\tLatest EvalsStore: ", game_engine.readGameState(True))
 
                                     # Reset of player eval server receivers
-                                    self.received_actions = [False, ONE_PLAYER_MODE]
                                     while not eval_store_q.empty():
                                         eval_store_q.get()
+                                    self.received_actions = [False, ONE_PLAYER_MODE]
                                 eval_lock.release()
                             
                             else:
