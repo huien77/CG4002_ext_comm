@@ -228,6 +228,17 @@ class GameEngine():
     #         savedKV_pair.append(player_key_value_pairs)
     #     return savedKV_pair
 
+    def sendRecvDiff(self, hitList):
+        for i in range(2):
+            compare = hitList[i] == self.eval_state['p{}'.format(i+1)]['action']
+            if compare:
+                prefix = "\033[32m"
+            else:
+                prefix = "\033[31m"
+            print(prefix, end="")
+            print("Player {} Match: {}".format(i+1, compare))
+        print("\033[0m")
+
     def printWatch(self):
         return
         # print("\033[31m\n\n[GAME Engine] WATCH: ", self.eval_state, "\n\n", self.player_state, end="\033[0m\n")
@@ -250,20 +261,16 @@ class GameEngine():
                 self.eval_state[p]['action'] = self.eval_state[p]['action'][5:]
                 # print("NEW action of ", p, self.eval_state[p]['action'])
 
-        print("[GAME_ENGINE] State After Prep: \n", self.eval_state)
+        # print("[GAME_ENGINE] State After Prep: \n", self.eval_state)
         self.lock.release()
         return self.eval_state
     
     def resetValues(self, eval=False):
         self.lock.acquire()
-        # print("\033[32m\n[GAME Engine] RESETTING: ", self.eval_state, "\n\n", self.player_state)
         if eval:
             self.eval_state['p1'].update(self.default_non_eval_pairs)
             self.eval_state['p2'].update(self.default_non_eval_pairs)
             self.lock.release()
-            # print("[GAME Engine] AFTER: ", self.eval_state, "\n\n", self.player_state)
-
-            # print("\033[0m",end="")
             return self.eval_state
         else:
             action1 = self.eval_state['p1']['action']
@@ -272,12 +279,7 @@ class GameEngine():
             self.player_state['p1'].update(self.default_non_eval_pairs)
             self.player_state['p2'].update(self.default_non_eval_pairs)
 
-            # self.eval_state['p1'].update([('action',action1)])
-            # self.eval_state['p2'].update([('action',action2)])
             self.lock.release()
-            # print("[GAME Engine] AFTER: ", self.eval_state, "\n\n", self.player_state)
-
-            # print("\033[0m",end="")
             return self.player_state
     
     def readGameState(self, eval=False):
