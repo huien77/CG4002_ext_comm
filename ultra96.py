@@ -313,8 +313,8 @@ class Client(Process):
                     fnTrack("GUN BUFFER 1")
                     game_engine.updatePlayerState(curr_state)
                     dbprint()
-                    player_num = GUN_buffer.get()
-                    temp = game_engine.performAction('shoot', player_num, False)
+                    player_1 = GUN_buffer.get()
+                    temp = game_engine.performAction('shoot', 1, False)
                     
                     # Check bullet hit of opponent
                     if not vest_buffer.empty():
@@ -325,7 +325,7 @@ class Client(Process):
                     
                     # this output is needed by eval server
                     input_state(temp)
-                    eval_buffer.put([temp, player_num])
+                    eval_buffer.put([temp, 1])
                 except Exception as e:
                     print(e)
                     pass
@@ -350,8 +350,8 @@ class Client(Process):
                 try:
                     game_engine.updatePlayerState(curr_state)
                     dbprint()
-                    player_num = GUN_buffer2.get()
-                    temp = game_engine.performAction('shoot', player_num, False)
+                    player_2 = GUN_buffer2.get()
+                    temp = game_engine.performAction('shoot', 2, False)
                     
                     # Check bullet hit of opponent
                     if not vest_buffer.empty():
@@ -362,7 +362,7 @@ class Client(Process):
                     
                     # this output is needed by eval server
                     input_state(temp)
-                    eval_buffer.put([temp, player_num])
+                    eval_buffer.put([temp, 2])
                 except Exception as e:
                     print(e)
                     pass
