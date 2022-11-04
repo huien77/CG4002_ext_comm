@@ -97,7 +97,7 @@ allQueue = [IMU_buffer, IMU_buffer2,GUN_buffer2, ACTION_buffer,ACTION_buffer2, e
 
 for qqq in allQueue:
     qqq.put("start")
-    qqq.get("start")
+    qqq.get()
 
 state_lock = Lock()
 game_engine_lock = Lock()
