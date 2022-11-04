@@ -138,7 +138,7 @@ class AIDetector(Process):
 
             # Read buffers and perform actions
             if self.player_num == 1:
-                while IMU_buffer.qsize() > 0:
+                while not IMU_buffer.empty():
                     # print("\r", IMU_buffer.qsize())
                     try:
                         data = IMU_buffer.get()
@@ -150,7 +150,7 @@ class AIDetector(Process):
                         pass
        
             elif self.player_num == 2:
-                while IMU_buffer2.qsize() > 0:
+                while not IMU_buffer2.empty():
                     try:
                         data = IMU_buffer2.get()
                         action = self.predict_action(data["V"])
@@ -173,7 +173,7 @@ class MQTTClient():
 
     # publish message to topic
     def publish(self):
-        if vis_send_buffer.qsize() > 0:
+        if not vis_send_buffer.empty():
             self.uniqueCounter += 1
             state = vis_send_buffer.get()
             state["turn"] = self.uniqueCounter
@@ -293,7 +293,7 @@ class Client(Process):
 
 
         while True:
-            if ACTION_buffer.qsize() > 0:
+            if not ACTION_buffer.empty():
                 try:
                     fnTrack("ACTION BUFFER 1")
                     game_engine.updatePlayerState(curr_state)
@@ -308,7 +308,7 @@ class Client(Process):
                     print(e)
                     
             
-            if GUN_buffer.qsize() > 0:
+            if not GUN_buffer.empty():
                 try:
                     fnTrack("GUN BUFFER 1")
                     game_engine.updatePlayerState(curr_state)
@@ -317,7 +317,7 @@ class Client(Process):
                     temp = game_engine.performAction('shoot', player_num, False)
                     
                     # Check bullet hit of opponent
-                    if vest_buffer.qsize() > 0:
+                    if not vest_buffer.empty():
                         vest_buffer.get()
                         # vest_buffer.queue.clear()
                         temp = game_engine.performAction('bullet1', 1, False)
@@ -346,7 +346,7 @@ class Client(Process):
                     print(e)
                     pass
 
-            if GUN_buffer2.qsize() > 0:
+            if not GUN_buffer2.empty():
                 try:
                     game_engine.updatePlayerState(curr_state)
                     dbprint()
@@ -354,7 +354,7 @@ class Client(Process):
                     temp = game_engine.performAction('shoot', player_num, False)
                     
                     # Check bullet hit of opponent
-                    if vest_buffer.qsize() > 0:
+                    if not vest_buffer.empty():
                         vest_buffer.get()
                         # vest_buffer.queue.clear()
                         temp = game_engine.performAction('bullet2', 2, False)
@@ -367,7 +367,7 @@ class Client(Process):
                     print(e)
                     pass
 
-            while eval_buffer.qsize() > 0:
+            while not eval_buffer.empty():
                 # try:
                     fnTrack(1)
                     state_read, player_num = eval_buffer.get()
@@ -407,9 +407,10 @@ class Client(Process):
                                     game_engine.updatePlayerState(state_pubs)
                                     eval_damage.put([vizData, player_num])
                             trying += 1
-                            # if trying > 1000000:
-                            #     vizData='no'
-                            #     eval_damage.put([vizData, player_num])
+                            if trying > 1000000:
+                                fnTrack(222)
+                                vizData='no'
+                                eval_damage.put([vizData, player_num])
                     fnTrack(6)
                     dbprint("", end="\033[0m\n")
 
@@ -420,14 +421,14 @@ class Client(Process):
                         game_engine.printWatch()
                         statedmgCheck = game_engine.readGameState(False)
                         if statedmgCheck[_players[player_num-1]]['action'] in ['grenade', 'shoot']:
-                            if eval_damage.qsize() > 0:
+                            if not eval_damage.empty():
                                 atacktype, attacker = eval_damage.get()
                                 recved_dmg = True
                             else:
                                 recved_dmg = False
                         fnTrack(9)
                         game_engine.printWatch()
-                        if (eval_store_q.qsize() > 0):
+                        if (not eval_store_q.empty()):
                             fnTrack(10)
                             eval_store_q.get()
                             if not self.received_actions[player_num - 1]:
@@ -510,7 +511,7 @@ class Client(Process):
                                 eval_lock.release()
                             
                             else:
-                                if eval_damage.qsize() > 0 :
+                                if not eval_damage.empty() :
                                     __, __ = eval_damage.get()
 
                             dbprint(end="\033[0m\n")
