@@ -76,21 +76,14 @@ ACTION_buffer2 = Queue()
 vest_buffer = Queue()
 eval_damage = Queue()
 
-# internal_lock = threading.Lock()
-# eval server buffer
 eval_buffer = Queue()
 
 eval_lock = Lock()
 eval_store_q = Queue()
 
-# eval_lock = threading.Lock()
-# receive from visualizer buffer
 vis_recv_buffer = Queue()
 
-# vis_recv_lock = threading.Lock()
-# send to visualizer buffer
 vis_send_buffer = Queue()
-# vis_send_lock = threading.Lock()
 
 # allQueue to initialise
 allQueue = [IMU_buffer, IMU_buffer2,GUN_buffer2, ACTION_buffer,ACTION_buffer2, eval_damage, eval_buffer, eval_store_q, vis_send_buffer]
@@ -134,7 +127,7 @@ class AIDetector(Process):
 
         # Sensitivity: Percentage certainty that prediction is correct
         # Threshold: Threshold of standard deviation of Accelerators combined
-        r = useFunc(data, 3, sensitivity=0.68, threshold=0.055, ideal_len=ideal_len)
+        r = useFunc(data, 3, sensitivity=0.68, threshold=0.057, ideal_len=ideal_len)
         
         return actions[r]
 
@@ -170,7 +163,6 @@ class AIDetector(Process):
                         print(e)
                         pass
 
-
 # for visualizer
 class MQTTClient():
     def __init__(self, topic, client_name):
@@ -186,16 +178,16 @@ class MQTTClient():
             self.uniqueCounter += 1
             state = vis_send_buffer.get()
             state["turn"] = self.uniqueCounter
-            dbprint("PUBLISHED TO MQTT:", state, end="\n")
+            dbprint("\033[34mPUBLISHED TO MQTT:", state, end="\033[0m\n")
             message = json.dumps(state)
             # publishing message to topic
             self.client.publish(self.topic, message, qos = 1)
 
     def receive(self):
         def on_message(client, data, message):
-            print("\033[0;34mPutting VISRECV!!!", end="")
+            print("\033[0;34mVISRECV", end="")
             vis_recv_buffer.put(message.payload.decode())
-            dbprint("\r[MQTT] Received: ", message.payload.decode(), end="")
+            dbprint("\r[MQTT] Received: ", message.payload.decode(), end="\n")
 
         self.client.on_message = on_message
         self.client.subscribe(self.topic)
@@ -696,6 +688,3 @@ if __name__ == "__main__":
     mqtt_r = MQTTClient('grenade17', 'receive')
     mqtt_r.receive()
     mqtt_r.client.loop_start()
-
-    # mqtt_p = MQTTClient('visualizer17', 'publish')
-    # mqtt_p.client.loop_start()
